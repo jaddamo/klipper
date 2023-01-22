@@ -68,8 +68,14 @@ class KeyboardReader:
         version, build_versions = msgparser.get_version_info()
         self.output("Loaded %d commands (%s / %s)"
                     % (message_count, version, build_versions))
-        self.output("MCU config: %s" % (" ".join(
-            ["%s=%s" % (k, v) for k, v in msgparser.get_constants().items()])))
+        self.output(
+            (
+                "MCU config: %s"
+                % " ".join(
+                    [f"{k}={v}" for k, v in msgparser.get_constants().items()]
+                )
+            )
+        )
         self.clocksync.connect(self.ser)
         self.ser.handle_default = self.handle_default
         self.ser.register_response(self.handle_output, '#output')
@@ -102,31 +108,31 @@ class KeyboardReader:
         try:
             val = int(parts[1])
         except ValueError as e:
-            self.output("Error: %s" % (str(e),))
+            self.output(f"Error: {str(e)}")
             return
         try:
             self.ser.send(' '.join(parts[2:]), minclock=val)
         except msgproto.error as e:
-            self.output("Error: %s" % (str(e),))
+            self.output(f"Error: {str(e)}")
             return
     def command_FLOOD(self, parts):
         try:
             count = int(parts[1])
             delay = float(parts[2])
         except ValueError as e:
-            self.output("Error: %s" % (str(e),))
+            self.output(f"Error: {str(e)}")
             return
         msg = ' '.join(parts[3:])
         delay_clock = int(delay * self.mcu_freq)
         msg_clock = int(self.clocksync.get_clock(self.reactor.monotonic())
                         + self.mcu_freq * .200)
         try:
-            for i in range(count):
+            for _ in range(count):
                 next_clock = msg_clock + delay_clock
                 self.ser.send(msg, minclock=msg_clock, reqclock=next_clock)
                 msg_clock = next_clock
         except msgproto.error as e:
-            self.output("Error: %s" % (str(e),))
+            self.output(f"Error: {str(e)}")
             return
     def command_SUPPRESS(self, parts):
         oid = None
@@ -135,7 +141,7 @@ class KeyboardReader:
             if len(parts) > 2:
                 oid = int(parts[2])
         except ValueError as e:
-            self.output("Error: %s" % (str(e),))
+            self.output(f"Error: {str(e)}")
             return
         self.ser.register_response(self.handle_suppress, name, oid)
     def command_STATS(self, parts):
@@ -147,13 +153,12 @@ class KeyboardReader:
         mp = self.ser.get_msgparser()
         cmds = [msgformat for msgtag, msgtype, msgformat in mp.get_messages()
                 if msgtype == 'command']
-        out = "Available mcu commands:"
-        out += "\n  ".join([""] + sorted(cmds))
+        out = "Available mcu commands:" + "\n  ".join([""] + sorted(cmds))
         out += "\nAvailable artificial commands:"
-        out += "\n  ".join([""] + [n for n in sorted(self.local_commands)])
+        out += "\n  ".join([""] + list(sorted(self.local_commands)))
         out += "\nAvailable local variables:"
         lvars = sorted(self.eval_globals.items())
-        out += "\n  ".join([""] + ["%s: %s" % (k, v) for k, v in lvars])
+        out += "\n  ".join([""] + [f"{k}: {v}" for k, v in lvars])
         self.output(out)
     def command_HELP(self, parts):
         self.output(help_txt)
@@ -168,14 +173,14 @@ class KeyboardReader:
                         e = int(e)
                     evalparts[i] = str(e)
             except:
-                self.output("Unable to evaluate: %s" % (line,))
+                self.output(f"Unable to evaluate: {line}")
                 return None
             line = ''.join(evalparts)
-            self.output("Eval: %s" % (line,))
+            self.output(f"Eval: {line}")
         try:
             line = self.pins.update_command(line).strip()
         except:
-            self.output("Unable to map pin: %s" % (line,))
+            self.output(f"Unable to map pin: {line}")
             return None
         if line:
             parts = line.split()
@@ -200,7 +205,7 @@ class KeyboardReader:
             try:
                 self.ser.send(msg)
             except msgproto.error as e:
-                self.output("Error: %s" % (str(e),))
+                self.output(f"Error: {str(e)}")
         self.data = kbdlines[-1]
 
 def main():
@@ -219,13 +224,14 @@ def main():
     serialport = args[0]
 
     baud = options.baud
-    if baud is None and not (serialport.startswith("/dev/rpmsg_")
-                             or serialport.startswith("/tmp/")):
+    if (
+        baud is None
+        and not serialport.startswith("/dev/rpmsg_")
+        and not serialport.startswith("/tmp/")
+    ):
         baud = 250000
 
-    debuglevel = logging.INFO
-    if options.verbose:
-        debuglevel = logging.DEBUG
+    debuglevel = logging.DEBUG if options.verbose else logging.INFO
     logging.basicConfig(level=debuglevel)
 
     r = reactor.Reactor()

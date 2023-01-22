@@ -21,18 +21,14 @@ def main():
     if len(args) != 2:
         opts.error("Incorrect number of arguments")
     infilename, outfilename = args
-    # Read input
-    f = open(infilename, "rb")
-    srcfirmware = f.read()
-    f.close()
+    with open(infilename, "rb") as f:
+        srcfirmware = f.read()
     # Update
     firmware = bytearray(srcfirmware)
     for pos in range(320, min(31040, len(firmware))):
         firmware[pos] ^= XOR_PATTERN[pos & 31]
-    # Write output
-    f = open(outfilename, "wb")
-    f.write(firmware)
-    f.close()
+    with open(outfilename, "wb") as f:
+        f.write(firmware)
 
 if __name__ == '__main__':
     main()

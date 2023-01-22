@@ -7,14 +7,12 @@ from . import tmc2208, tmc2130, tmc, tmc_uart
 
 TMC_FREQUENCY=12000000.
 
-Registers = dict(tmc2208.Registers)
-Registers.update({
-    "TCOOLTHRS":    0x14,
-    "COOLCONF":     0x42,
-    "SGTHRS":       0x40,
-    "SG_RESULT":    0x41
-})
-
+Registers = dict(tmc2208.Registers) | {
+    "TCOOLTHRS": 0x14,
+    "COOLCONF": 0x42,
+    "SGTHRS": 0x40,
+    "SG_RESULT": 0x41,
+}
 ReadRegisters = tmc2208.ReadRegisters + ["SG_RESULT"]
 
 Fields = dict(tmc2208.Fields)

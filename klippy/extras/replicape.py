@@ -184,24 +184,26 @@ class Replicape:
         self.stepper_dacs = {}
         shift_registers = [1, 0, 0, 1, 1]
         for port, name in enumerate('xyzeh'):
-            prefix = 'stepper_%s_' % (name,)
+            prefix = f'stepper_{name}_'
             sc = config.getchoice(
-                prefix + 'microstep_mode', ReplicapeStepConfig, 'disable')
+                f'{prefix}microstep_mode', ReplicapeStepConfig, 'disable'
+            )
             if sc is None:
                 continue
             sc |= shift_registers[port]
-            if config.getboolean(prefix + 'chopper_off_time_high', False):
+            if config.getboolean(f'{prefix}chopper_off_time_high', False):
                 sc |= 1<<3
-            if config.getboolean(prefix + 'chopper_hysteresis_high', False):
+            if config.getboolean(f'{prefix}chopper_hysteresis_high', False):
                 sc |= 1<<2
-            if config.getboolean(prefix + 'chopper_blank_time_high', True):
+            if config.getboolean(f'{prefix}chopper_blank_time_high', True):
                 sc |= 1<<1
             shift_registers[port] = sc
             channel = port + 11
             cur = config.getfloat(
-                prefix + 'current', above=0., maxval=REPLICAPE_MAX_CURRENT)
+                f'{prefix}current', above=0.0, maxval=REPLICAPE_MAX_CURRENT
+            )
             self.stepper_dacs[channel] = cur / REPLICAPE_MAX_CURRENT
-            self.pins[prefix + 'enable'] = (ReplicapeDACEnable, channel)
+            self.pins[f'{prefix}enable'] = (ReplicapeDACEnable, channel)
         self.enabled_channels = {ch: False for cl, ch in self.pins.values()}
         self.sr_disabled = list(reversed(shift_registers))
         if [i for i in [0, 1, 2] if 11+i in self.stepper_dacs]:
@@ -265,7 +267,7 @@ class Replicape:
             self.sr_disabled[index] |= 1
             self.sr_spi.spi_send(self.sr_disabled)
             return servo_pwm(self, pin_params)
-        raise pins.error("Unknown replicape pin %s" % (pin,))
+        raise pins.error(f"Unknown replicape pin {pin}")
 
 def load_config(config):
     return Replicape(config)

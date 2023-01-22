@@ -15,14 +15,12 @@ class TestAxis:
         if vib_dir is None:
             self._vib_dir = (1., 0.) if axis == 'x' else (0., 1.)
         else:
-            s = math.sqrt(sum([d*d for d in vib_dir]))
+            s = math.sqrt(sum(d*d for d in vib_dir))
             self._vib_dir = [d / s for d in vib_dir]
     def matches(self, chip_axis):
         if self._vib_dir[0] and 'x' in chip_axis:
             return True
-        if self._vib_dir[1] and 'y' in chip_axis:
-            return True
-        return False
+        return bool(self._vib_dir[1] and 'y' in chip_axis)
     def get_name(self):
         return self._name
     def get_point(self, l):
@@ -36,13 +34,12 @@ def _parse_axis(gcmd, raw_axis):
         return TestAxis(axis=raw_axis)
     dirs = raw_axis.split(',')
     if len(dirs) != 2:
-        raise gcmd.error("Invalid format of axis '%s'" % (raw_axis,))
+        raise gcmd.error(f"Invalid format of axis '{raw_axis}'")
     try:
         dir_x = float(dirs[0].strip())
         dir_y = float(dirs[1].strip())
     except:
-        raise gcmd.error(
-                "Unable to parse axis direction '%s'" % (raw_axis,))
+        raise gcmd.error(f"Unable to parse axis direction '{raw_axis}'")
     return TestAxis(vib_dir=(dir_x, dir_y))
 
 class VibrationPulseTest:
@@ -162,7 +159,7 @@ class ResonanceTester:
                 toolhead.wait_moves()
                 toolhead.dwell(0.500)
                 if len(axes) > 1:
-                    gcmd.respond_info("Testing axis %s" % axis.get_name())
+                    gcmd.respond_info(f"Testing axis {axis.get_name()}")
 
                 raw_values = []
                 for chip_axis, chip in self.accel_chips:
@@ -185,9 +182,7 @@ class ResonanceTester:
                     continue
                 for chip_axis, aclient in raw_values:
                     if not aclient.has_valid_samples():
-                        raise gcmd.error(
-                                "%s-axis accelerometer measured no data" % (
-                                    chip_axis,))
+                        raise gcmd.error(f"{chip_axis}-axis accelerometer measured no data")
                     new_data = helper.process_accelerometer_data(aclient)
                     if calibration_data[axis] is None:
                         calibration_data[axis] = new_data
@@ -202,31 +197,26 @@ class ResonanceTester:
         outputs = gcmd.get("OUTPUT", "resonances").lower().split(',')
         for output in outputs:
             if output not in ['resonances', 'raw_data']:
-                raise gcmd.error("Unsupported output '%s', only 'resonances'"
-                                 " and 'raw_data' are supported" % (output,))
+                raise gcmd.error(
+                    f"Unsupported output '{output}', only 'resonances' and 'raw_data' are supported"
+                )
         if not outputs:
             raise gcmd.error("No output specified, at least one of 'resonances'"
                              " or 'raw_data' must be set in OUTPUT parameter")
         name_suffix = gcmd.get("NAME", time.strftime("%Y%m%d_%H%M%S"))
         if not self.is_valid_name_suffix(name_suffix):
             raise gcmd.error("Invalid NAME parameter")
-        csv_output = 'resonances' in outputs
-        raw_output = 'raw_data' in outputs
+        if csv_output := 'resonances' in outputs:
+                # Setup calculation of resonances
+            helper = shaper_calibrate.ShaperCalibrate(self.printer) if csv_output else None
+            raw_output = 'raw_data' in outputs
 
-        # Setup calculation of resonances
-        if csv_output:
-            helper = shaper_calibrate.ShaperCalibrate(self.printer)
-        else:
-            helper = None
-
-        data = self._run_test(
-                gcmd, [axis], helper,
-                raw_name_suffix=name_suffix if raw_output else None)[axis]
-        if csv_output:
+            data = self._run_test(
+                    gcmd, [axis], helper,
+                    raw_name_suffix=name_suffix if raw_output else None)[axis]
             csv_name = self.save_calibration_data('resonances', name_suffix,
                                                   helper, axis, data)
-            gcmd.respond_info(
-                    "Resonances data written to %s file" % (csv_name,))
+            gcmd.respond_info(f"Resonances data written to {csv_name} file")
     cmd_SHAPER_CALIBRATE_help = (
         "Simular to TEST_RESONANCES but suggest input shaper config")
     def cmd_SHAPER_CALIBRATE(self, gcmd):
@@ -235,7 +225,7 @@ class ResonanceTester:
         if not axis:
             calibrate_axes = [TestAxis('x'), TestAxis('y')]
         elif axis.lower() not in 'xy':
-            raise gcmd.error("Unsupported axis '%s'" % (axis,))
+            raise gcmd.error(f"Unsupported axis '{axis}'")
         else:
             calibrate_axes = [TestAxis(axis.lower())]
 
@@ -255,8 +245,8 @@ class ResonanceTester:
         for axis in calibrate_axes:
             axis_name = axis.get_name()
             gcmd.respond_info(
-                    "Calculating the best input shaper parameters for %s axis"
-                    % (axis_name,))
+                f"Calculating the best input shaper parameters for {axis_name} axis"
+            )
             calibration_data[axis].normalize_to_frequencies()
             best_shaper, all_shapers = helper.find_best_shaper(
                     calibration_data[axis], max_smoothing, gcmd.respond_info)
@@ -269,8 +259,7 @@ class ResonanceTester:
             csv_name = self.save_calibration_data(
                     'calibration_data', name_suffix, helper, axis,
                     calibration_data[axis], all_shapers)
-            gcmd.respond_info(
-                    "Shaper calibration data written to %s file" % (csv_name,))
+            gcmd.respond_info(f"Shaper calibration data written to {csv_name} file")
         gcmd.respond_info(
             "The SAVE_CONFIG command will update the printer config file\n"
             "with these parameters and restart the printer.")
@@ -286,8 +275,7 @@ class ResonanceTester:
         helper = shaper_calibrate.ShaperCalibrate(self.printer)
         for chip_axis, aclient in raw_values:
             if not aclient.has_valid_samples():
-                raise gcmd.error(
-                        "%s-axis accelerometer measured no data" % (chip_axis,))
+                raise gcmd.error(f"{chip_axis}-axis accelerometer measured no data")
             data = helper.process_accelerometer_data(aclient)
             vx = data.psd_x.mean()
             vy = data.psd_y.mean()
@@ -302,11 +290,11 @@ class ResonanceTester:
     def get_filename(self, base, name_suffix, axis=None, point=None):
         name = base
         if axis:
-            name += '_' + axis.get_name()
+            name += f'_{axis.get_name()}'
         if point:
             name += "_%.3f_%.3f_%.3f" % (point[0], point[1], point[2])
-        name += '_' + name_suffix
-        return os.path.join("/tmp", name + ".csv")
+        name += f'_{name_suffix}'
+        return os.path.join("/tmp", f"{name}.csv")
 
     def save_calibration_data(self, base_name, name_suffix, shaper_calibrate,
                               axis, calibration_data, all_shapers=None):

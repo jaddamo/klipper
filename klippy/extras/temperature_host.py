@@ -18,7 +18,7 @@ class Temperature_HOST:
 
         self.temp = self.min_temp = self.max_temp = 0.0
 
-        self.printer.add_object("temperature_host " + self.name, self)
+        self.printer.add_object(f"temperature_host {self.name}", self)
         if self.printer.get_start_args().get('debugoutput') is not None:
             return
         self.sample_timer = self.reactor.register_timer(
@@ -26,8 +26,7 @@ class Temperature_HOST:
         try:
             self.file_handle = open(self.path, "r")
         except:
-            raise config.error("Unable to open temperature file '%s'"
-                               % (self.path,))
+            raise config.error(f"Unable to open temperature file '{self.path}'")
 
         self.printer.register_event_handler("klippy:connect",
                                             self.handle_connect)

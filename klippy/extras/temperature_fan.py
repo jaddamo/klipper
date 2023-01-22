@@ -32,8 +32,11 @@ class TemperatureFan:
         self.last_temp = 0.
         self.last_temp_time = 0.
         self.target_temp_conf = config.getfloat(
-            'target_temp', 40. if self.max_temp > 40. else self.max_temp,
-            minval=self.min_temp, maxval=self.max_temp)
+            'target_temp',
+            min(self.max_temp, 40.0),
+            minval=self.min_temp,
+            maxval=self.max_temp,
+        )
         self.target_temp = self.target_temp_conf
         algos = {'watermark': ControlBangBang, 'pid': ControlPID}
         algo = config.getchoice('control', algos)

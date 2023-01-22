@@ -117,14 +117,13 @@ class PrinterStepperEnable:
     def cmd_SET_STEPPER_ENABLE(self, gcmd):
         stepper_name = gcmd.get('STEPPER', None)
         if stepper_name not in self.enable_lines:
-            gcmd.respond_info('SET_STEPPER_ENABLE: Invalid stepper "%s"'
-                              % (stepper_name,))
+            gcmd.respond_info(f'SET_STEPPER_ENABLE: Invalid stepper "{stepper_name}"')
             return
         stepper_enable = gcmd.get_int('ENABLE', 1)
         self.motor_debug_enable(stepper_name, stepper_enable)
     def lookup_enable(self, name):
         if name not in self.enable_lines:
-            raise self.printer.config_error("Unknown stepper '%s'" % (name,))
+            raise self.printer.config_error(f"Unknown stepper '{name}'")
         return self.enable_lines[name]
     def get_steppers(self):
         return list(self.enable_lines.keys())

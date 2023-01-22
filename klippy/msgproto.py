@@ -33,8 +33,7 @@ def crc16_ccitt(buf):
         data ^= crc & 0xff
         data ^= (data & 0x0f) << 4
         crc = ((data << 8) | (crc >> 8)) ^ (data >> 4) ^ (data << 3)
-    crc = chr(crc >> 8) + chr(crc & 0xff)
-    return crc
+    return chr(crc >> 8) + chr(crc & 0xff)
 
 class PT_uint32:
     is_int = True
@@ -90,8 +89,7 @@ class enumeration_error(error):
     def __init__(self, enum_name, value):
         self.enum_name = enum_name
         self.value = value
-        error.__init__(self, "Unknown value '%s' in enumeration '%s'"
-                       % (value, enum_name))
+        error.__init__(self, f"Unknown value '{value}' in enumeration '{enum_name}'")
     def get_enum_params(self):
         return self.enum_name, self.value
 
@@ -130,7 +128,7 @@ def lookup_params(msgformat, enumerations={}):
     for name, fmt in argparts:
         pt = MessageTypes[fmt]
         for enum_name, enums in enumerations.items():
-            if name == enum_name or name.endswith('_' + enum_name):
+            if name == enum_name or name.endswith(f'_{enum_name}'):
                 pt = Enumeration(pt, enum_name, enums)
                 break
         out.append((name, pt))
@@ -151,7 +149,7 @@ def lookup_output_params(msgformat):
                     param_types.append(t)
                     break
             else:
-                raise error("Invalid output format for '%s'" % (msgformat,))
+                raise error(f"Invalid output format for '{msgformat}'")
         args = args[pos+1:]
     return param_types
 
@@ -171,14 +169,12 @@ class MessageFormat:
         self.param_types = [t for name, t in self.param_names]
         self.name_to_type = dict(self.param_names)
     def encode(self, params):
-        out = []
-        out.append(self.msgid)
+        out = [self.msgid]
         for i, t in enumerate(self.param_types):
             t.encode(out, params[i])
         return out
     def encode_by_name(self, **params):
-        out = []
-        out.append(self.msgid)
+        out = [self.msgid]
         for name, t in self.param_names:
             t.encode(out, params[name])
         return out
@@ -216,7 +212,7 @@ class OutputFormat:
         outmsg = self.debugformat % tuple(out)
         return {'#msg': outmsg}, pos
     def format_params(self, params):
-        return "#output %s" % (params['#msg'],)
+        return f"#output {params['#msg']}"
 
 class UnknownFormat:
     name = '#unknown'
@@ -225,7 +221,7 @@ class UnknownFormat:
         msg = bytes(bytearray(s))
         return {'#msgid': msgid, '#msg': msg}, len(s)-MESSAGE_TRAILER_SIZE
     def format_params(self, params):
-        return "#unknown %s" % (repr(params['#msg']),)
+        return f"#unknown {repr(params['#msg'])}"
 
 class MessageParser:
     error = error
@@ -258,10 +254,7 @@ class MessageParser:
             return -1
         msgcrc = s[msglen-MESSAGE_TRAILER_CRC:msglen-MESSAGE_TRAILER_CRC+2]
         crc = crc16_ccitt(s[:msglen-MESSAGE_TRAILER_SIZE])
-        if crc != msgcrc:
-            #logging.debug("got crc %s vs %s", repr(crc), repr(msgcrc))
-            return -1
-        return msglen
+        return -1 if crc != msgcrc else msglen
     def dump(self, s):
         msgseq = s[MESSAGE_POS_SEQ]
         out = ["seq: %02x" % (msgseq,)]
@@ -280,9 +273,7 @@ class MessageParser:
         if mid is not None:
             return mid.format_params(params)
         msg = params.get('#msg')
-        if msg is not None:
-            return "%s %s" % (name, msg)
-        return str(params)
+        return f"{name} {msg}" if msg is not None else str(params)
     def parse(self, s):
         msgid = s[MESSAGE_HEADER_SIZE]
         mid = self.messages_by_id.get(msgid, self.unknown)
@@ -295,15 +286,14 @@ class MessageParser:
         msglen = MESSAGE_MIN + len(cmd)
         seq = (seq & MESSAGE_SEQ_MASK) | MESSAGE_DEST
         out = [chr(msglen), chr(seq), cmd]
-        out.append(crc16_ccitt(''.join(out)))
-        out.append(MESSAGE_SYNC)
+        out.extend((crc16_ccitt(''.join(out)), MESSAGE_SYNC))
         return ''.join(out)
     def _parse_buffer(self, value):
         if not value:
             return []
         tval = int(value, 16)
         out = []
-        for i in range(len(value) // 2):
+        for _ in range(len(value) // 2):
             out.append(tval & 0xff)
             tval >>= 8
         out.reverse()
@@ -396,7 +386,7 @@ class MessageParser:
             responses = data.get('responses')
             output = data.get('output', {})
             all_messages = dict(commands)
-            all_messages.update(responses)
+            all_messages |= responses
             all_messages.update(output)
             self._init_messages(all_messages, commands.values(),
                                 output.values())

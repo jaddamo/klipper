@@ -69,11 +69,13 @@ class BedTiltCalibrate:
             x, y, z = pos
             return (z - x*params['x_adjust'] - y*params['y_adjust']
                     - params['z_adjust'])
+
         def errorfunc(params):
             total_error = 0.
             for pos in positions:
                 total_error += adjusted_height(pos, params)**2
             return total_error
+
         new_params = mathutil.coordinate_descent(
             params.keys(), params, errorfunc)
         # Update current bed_tilt calculations
@@ -89,7 +91,7 @@ class BedTiltCalibrate:
                          adjusted_height(pos, new_params))
         msg = "x_adjust: %.6f y_adjust: %.6f z_adjust: %.6f" % (
             x_adjust, y_adjust, z_adjust)
-        self.printer.set_rollover_info("bed_tilt", "bed_tilt: %s" % (msg,))
+        self.printer.set_rollover_info("bed_tilt", f"bed_tilt: {msg}")
         self.gcode.respond_info(
             "%s\nThe above parameters have been applied to the current\n"
             "session. The SAVE_CONFIG command will update the printer\n"

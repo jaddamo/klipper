@@ -23,7 +23,7 @@ class HostResponder:
                                desc=self.cmd_RESPOND_help)
     def cmd_M118(self, gcmd):
         msg = gcmd.get_raw_command_parameters()
-        gcmd.respond_raw("%s %s" % (self.default_prefix, msg))
+        gcmd.respond_raw(f"{self.default_prefix} {msg}")
     cmd_RESPOND_help = ("Echo the message prepended with a prefix")
     def cmd_RESPOND(self, gcmd):
         respond_type = gcmd.get('TYPE', None)
@@ -38,7 +38,7 @@ class HostResponder:
                     " of 'echo', 'command', or 'error'" % (respond_type,))
         prefix = gcmd.get('PREFIX', prefix)
         msg = gcmd.get('MSG', '')
-        gcmd.respond_raw("%s %s" % (prefix, msg))
+        gcmd.respond_raw(f"{prefix} {msg}")
 
 def load_config(config):
     return HostResponder(config)

@@ -87,19 +87,18 @@ class Printer:
             self.request_exit('error_exit')
     def add_object(self, name, obj):
         if name in self.objects:
-            raise self.config_error(
-                "Printer object '%s' already created" % (name,))
+            raise self.config_error(f"Printer object '{name}' already created")
         self.objects[name] = obj
     def lookup_object(self, name, default=configfile.sentinel):
         if name in self.objects:
             return self.objects[name]
         if default is configfile.sentinel:
-            raise self.config_error("Unknown config object '%s'" % (name,))
+            raise self.config_error(f"Unknown config object '{name}'")
         return default
     def lookup_objects(self, module=None):
         if module is None:
             return list(self.objects.items())
-        prefix = module + ' '
+        prefix = f'{module} '
         objs = [(n, self.objects[n])
                 for n in self.objects if n.startswith(prefix)]
         if module in self.objects:
@@ -110,23 +109,22 @@ class Printer:
             return self.objects[section]
         module_parts = section.split()
         module_name = module_parts[0]
-        py_name = os.path.join(os.path.dirname(__file__),
-                               'extras', module_name + '.py')
+        py_name = os.path.join(
+            os.path.dirname(__file__), 'extras', f'{module_name}.py'
+        )
         py_dirname = os.path.join(os.path.dirname(__file__),
                                   'extras', module_name, '__init__.py')
         if not os.path.exists(py_name) and not os.path.exists(py_dirname):
             if default is not configfile.sentinel:
                 return default
-            raise self.config_error("Unable to load module '%s'" % (section,))
-        mod = importlib.import_module('extras.' + module_name)
-        init_func = 'load_config'
-        if len(module_parts) > 1:
-            init_func = 'load_config_prefix'
+            raise self.config_error(f"Unable to load module '{section}'")
+        mod = importlib.import_module(f'extras.{module_name}')
+        init_func = 'load_config_prefix' if len(module_parts) > 1 else 'load_config'
         init_func = getattr(mod, init_func, None)
         if init_func is None:
             if default is not configfile.sentinel:
                 return default
-            raise self.config_error("Unable to load module '%s'" % (section,))
+            raise self.config_error(f"Unable to load module '{section}'")
         self.objects[section] = init_func(config.getsection(section))
         return self.objects[section]
     def _read_config(self):
@@ -145,9 +143,11 @@ class Printer:
         pconfig.check_unused_options(config)
     def _get_versions(self):
         try:
-            parts = ["%s=%s" % (n.split()[-1], m.get_status()['mcu_version'])
-                     for n, m in self.lookup_objects('mcu')]
-            parts.insert(0, "host=%s" % (self.start_args['software_version'],))
+            parts = [
+                f"{n.split()[-1]}={m.get_status()['mcu_version']}"
+                for n, m in self.lookup_objects('mcu')
+            ]
+            parts.insert(0, f"host={self.start_args['software_version']}")
             return "\nKnown versions: %s\n" % (", ".join(parts),)
         except:
             logging.exception("Error in _get_versions()")
@@ -173,7 +173,7 @@ class Printer:
             return
         except mcu.error as e:
             logging.exception("MCU error during connect")
-            self._set_state("%s%s" % (str(e), message_mcu_connect_error))
+            self._set_state(f"{str(e)}{message_mcu_connect_error}")
             util.dump_mcu_build()
             return
         except Exception as e:
@@ -189,8 +189,7 @@ class Printer:
                 cb()
         except Exception as e:
             logging.exception("Unhandled exception during ready callback")
-            self.invoke_shutdown("Internal error during ready callback: %s"
-                                 % (str(e),))
+            self.invoke_shutdown(f"Internal error during ready callback: {str(e)}")
     def run(self):
         systime = time.time()
         monotime = self.reactor.monotonic()
@@ -231,7 +230,7 @@ class Printer:
             return
         logging.error("Transition to shutdown state: %s", msg)
         self.in_shutdown_state = True
-        self._set_state("%s%s" % (msg, message_shutdown))
+        self._set_state(f"{msg}{message_shutdown}")
         for cb in self.event_handlers.get("klippy:shutdown", []):
             try:
                 cb()
@@ -268,14 +267,14 @@ def import_test():
                 if not os.path.exists(iname):
                     continue
                 module_name = fname
-            importlib.import_module(mname + '.' + module_name)
+            importlib.import_module(f'{mname}.{module_name}')
     sys.exit(0)
 
 def arg_dictionary(option, opt_str, value, parser):
     key, fname = "dictionary", value
     if '=' in value:
         mcu_name, fname = value.split('=', 1)
-        key = "dictionary_" + mcu_name
+        key = f"dictionary_{mcu_name}"
     if parser.values.dictionary is None:
         parser.values.dictionary = {}
     parser.values.dictionary[key] = fname
@@ -309,9 +308,7 @@ def main():
     start_args = {'config_file': args[0], 'apiserver': options.apiserver,
                   'start_reason': 'startup'}
 
-    debuglevel = logging.INFO
-    if options.verbose:
-        debuglevel = logging.DEBUG
+    debuglevel = logging.DEBUG if options.verbose else logging.INFO
     if options.debuginput:
         start_args['debuginput'] = options.debuginput
         debuginput = open(options.debuginput, 'rb')
@@ -320,7 +317,7 @@ def main():
         start_args['gcode_fd'] = util.create_pty(options.inputtty)
     if options.debugoutput:
         start_args['debugoutput'] = options.debugoutput
-        start_args.update(options.dictionary)
+        start_args |= options.dictionary
     bglogger = None
     if options.logfile:
         start_args['log_file'] = options.logfile
@@ -331,11 +328,14 @@ def main():
     start_args['software_version'] = util.get_git_version()
     start_args['cpu_info'] = util.get_cpu_info()
     if bglogger is not None:
-        versions = "\n".join([
-            "Args: %s" % (sys.argv,),
-            "Git version: %s" % (repr(start_args['software_version']),),
-            "CPU: %s" % (start_args['cpu_info'],),
-            "Python: %s" % (repr(sys.version),)])
+        versions = "\n".join(
+            [
+                f"Args: {sys.argv}",
+                f"Git version: {repr(start_args['software_version'])}",
+                f"CPU: {start_args['cpu_info']}",
+                f"Python: {repr(sys.version)}",
+            ]
+        )
         logging.info(versions)
     elif not options.debugoutput:
         logging.warning("No log file specified!"

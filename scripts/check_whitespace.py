@@ -18,16 +18,15 @@ def report_error(filename, lineno, msg):
 def check_file(filename):
     # Open and read file
     try:
-        f = open(filename, 'rb')
-        data = f.read()
-        f.close()
+        with open(filename, 'rb') as f:
+            data = f.read()
     except IOError:
         return
     if not data:
         # Empty files are okay
         return
     # Do checks
-    is_source_code = any([filename.endswith(s) for s in ['.c', '.h', '.py']])
+    is_source_code = any(filename.endswith(s) for s in ['.c', '.h', '.py'])
     lineno = 0
     for lineno, line in enumerate(data.split('\n')):
         # Verify line is valid utf-8
@@ -44,8 +43,7 @@ def check_file(filename):
                     if os.path.basename(filename).lower() == 'makefile':
                         continue
                     char_name = 'tab'
-                report_error(filename, lineno, "Invalid %s character" % (
-                    char_name,))
+                report_error(filename, lineno, f"Invalid {char_name} character")
                 break
         # Check for trailing space
         if line.endswith(' ') or line.endswith('\t'):

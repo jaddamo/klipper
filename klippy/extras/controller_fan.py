@@ -35,7 +35,7 @@ class ControllerFan:
         if self.stepper_names is None:
             self.stepper_names = all_steppers
             return
-        if not all(x in all_steppers for x in self.stepper_names):
+        if any(x not in all_steppers for x in self.stepper_names):
             raise self.printer.config_error(
                 "One or more of these steppers are unknown: "
                  "%s (valid steppers are: %s)"

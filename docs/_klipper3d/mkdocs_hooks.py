@@ -38,5 +38,4 @@ def transform(markdown: str, page, config, files):
                 logger.debug((f'[mkdocs_hooks] rewrite line {i+1}: '
                         f'"{lines[i]}" -> "{line_out}"'))
             lines[i] = line_out
-    output = "\n".join(lines)
-    return output
+    return "\n".join(lines)

@@ -106,7 +106,7 @@ class BME280:
         self.dig = self.sample_timer = None
         self.chip_type = 'BMP280'
         self.chip_registers = BME280_REGS
-        self.printer.add_object("bme280 " + self.name, self)
+        self.printer.add_object(f"bme280 {self.name}", self)
         if self.printer.get_start_args().get('debugoutput') is not None:
             return
         self.printer.register_event_handler("klippy:connect",
@@ -129,7 +129,7 @@ class BME280:
     def _init_bmxx80(self):
         def read_calibration_data_bmp280(calib_data_1):
             dig = {}
-            dig['T1'] = get_unsigned_short(calib_data_1[0:2])
+            dig['T1'] = get_unsigned_short(calib_data_1[:2])
             dig['T2'] = get_signed_short(calib_data_1[2:4])
             dig['T3'] = get_signed_short(calib_data_1[4:6])
 
@@ -147,7 +147,7 @@ class BME280:
         def read_calibration_data_bme280(calib_data_1, calib_data_2):
             dig = read_calibration_data_bmp280(calib_data_1)
             dig['H1'] = calib_data_1[25] & 0xFF
-            dig['H2'] = get_signed_short(calib_data_2[0:2])
+            dig['H2'] = get_signed_short(calib_data_2[:2])
             dig['H3'] = calib_data_2[2] & 0xFF
             dig['H4'] = get_twos_complement(
                 (calib_data_2[3] << 4) | (calib_data_2[4] & 0x0F), 12)
@@ -212,7 +212,7 @@ class BME280:
             self.chip_registers = BME680_REGS
         else:
             self.max_sample_time = \
-                (1.25 + (2.3 * self.os_temp) + ((2.3 * self.os_pres) + .575)
+                    (1.25 + (2.3 * self.os_temp) + ((2.3 * self.os_pres) + .575)
                  + ((2.3 * self.os_hum) + .575)) / 1000
             self.sample_timer = self.reactor.register_timer(self._sample_bme280)
             self.chip_registers = BME280_REGS
@@ -354,12 +354,11 @@ class BME280:
         var1 = (1. + var1 / 32768.) * dig['P1']
         if var1 == 0:
             return 0.
-        else:
-            pressure = 1048576.0 - raw_pressure
-            pressure = ((pressure - var2 / 4096.) * 6250.) / var1
-            var1 = dig['P9'] * pressure * pressure / 2147483648.
-            var2 = pressure * dig['P8'] / 32768.
-            return pressure + (var1 + var2 + dig['P7']) / 16.
+        pressure = 1048576.0 - raw_pressure
+        pressure = ((pressure - var2 / 4096.) * 6250.) / var1
+        var1 = dig['P9'] * pressure * pressure / 2147483648.
+        var2 = pressure * dig['P8'] / 32768.
+        return pressure + (var1 + var2 + dig['P7']) / 16.
 
     def _compensate_pressure_bme680(self, raw_pressure):
         dig = self.dig
@@ -372,14 +371,13 @@ class BME280:
         var1 = (1. + var1 / 32768.) * dig['P1']
         if var1 == 0:
             return 0.
-        else:
-            pressure = 1048576.0 - raw_pressure
-            pressure = ((pressure - var2 / 4096.) * 6250.) / var1
-            var1 = dig['P9'] * pressure * pressure / 2147483648.
-            var2 = pressure * dig['P8'] / 32768.
-            var3 = (pressure / 256.) * (pressure / 256.) * (pressure / 256.) * (
-                    dig['P10'] / 131072.)
-            return pressure + (var1 + var2 + var3 + (dig['P7'] * 128.)) / 16.
+        pressure = 1048576.0 - raw_pressure
+        pressure = ((pressure - var2 / 4096.) * 6250.) / var1
+        var1 = dig['P9'] * pressure * pressure / 2147483648.
+        var2 = pressure * dig['P8'] / 32768.
+        var3 = (pressure / 256.) * (pressure / 256.) * (pressure / 256.) * (
+                dig['P10'] / 131072.)
+        return pressure + (var1 + var2 + var3 + (dig['P7'] * 128.)) / 16.
 
     def _compensate_humidity_bme280(self, raw_humidity):
         dig = self.dig
@@ -411,10 +409,8 @@ class BME280:
     def _compensate_gas(self, gas_raw, gas_range):
         gas_switching_error = self.read_register('RANGE_SWITCHING_ERROR', 1)[0]
         var1 = (1340. + 5. * gas_switching_error) * \
-               BME680_GAS_CONSTANTS[gas_range][0]
-        gas = var1 * BME680_GAS_CONSTANTS[gas_range][1] / (
-                gas_raw - 512. + var1)
-        return gas
+                   BME680_GAS_CONSTANTS[gas_range][0]
+        return var1 * BME680_GAS_CONSTANTS[gas_range][1] / (gas_raw - 512.0 + var1)
 
     def _calculate_gas_heater_resistance(self, target_temp):
         amb_temp = self.temp
@@ -433,15 +429,12 @@ class BME280:
 
     def _calculate_gas_heater_duration(self, duration_ms):
         if duration_ms >= 4032:
-            duration_reg = 0xff
-        else:
-            factor = 0
-            while duration_ms > 0x3F:
-                duration_ms /= 4
-                factor += 1
-            duration_reg = duration_ms + (factor * 64)
-
-        return duration_reg
+            return 0xff
+        factor = 0
+        while duration_ms > 0x3F:
+            duration_ms /= 4
+            factor += 1
+        return duration_ms + (factor * 64)
 
     def read_id(self):
         # read chip id register

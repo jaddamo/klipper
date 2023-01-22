@@ -103,6 +103,4 @@ def list_boards():
 def lookup_board(name):
     name = name.lower()
     bdef = BOARD_ALIASES.get(name, BOARD_DEFS.get(name, None))
-    if bdef is not None:
-        return dict(bdef)
-    return None
+    return dict(bdef) if bdef is not None else None

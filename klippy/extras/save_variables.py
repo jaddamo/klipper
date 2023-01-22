@@ -38,7 +38,7 @@ class SaveVariables:
         try:
             value = ast.literal_eval(value)
         except ValueError as e:
-            raise gcmd.error("Unable to parse '%s' as a literal" % (value,))
+            raise gcmd.error(f"Unable to parse '{value}' as a literal")
         newvars = dict(self.allVariables)
         newvars[varname] = value
         # Write file
@@ -47,9 +47,8 @@ class SaveVariables:
         for name, val in sorted(newvars.items()):
             varfile.set('Variables', name, repr(val))
         try:
-            f = open(self.filename, "w")
-            varfile.write(f)
-            f.close()
+            with open(self.filename, "w") as f:
+                varfile.write(f)
         except:
             msg = "Unable to save variable"
             logging.exception(msg)

@@ -33,9 +33,7 @@ class ReactorCompletion:
             self.waiting.append(wait)
             self.reactor.pause(waketime)
             self.waiting.remove(wait)
-            if self.result is self.sentinel:
-                return waketime_result
-        return self.result
+        return waketime_result if self.result is self.sentinel else self.result
 
 class ReactorCallback:
     def __init__(self, reactor, callback, waketime):
@@ -140,9 +138,7 @@ class SelectReactor:
                     # Reactor looks idle and gc is due - run it
                     gc_level = 0
                     if gi[1] >= 10:
-                        gc_level = 1
-                        if gi[2] >= 10:
-                            gc_level = 2
+                        gc_level = 2 if gi[2] >= 10 else 1
                     self._last_gc_times[gc_level] = eventtime
                     gc.collect(gc_level)
                     return 0.
@@ -219,10 +215,7 @@ class SelectReactor:
         g_next.parent = g.parent
         g.timer = self.register_timer(g.switch, waketime)
         self._next_timer = self.NOW
-        # Switch to _dispatch_loop (via _end_greenlet or direct)
-        eventtime = g_next.switch()
-        # This greenlet activated from g.timer.callback (via _check_timers)
-        return eventtime
+        return g_next.switch()
     def _end_greenlet(self, g_old):
         # Cache this greenlet for later use
         self._greenlets.append(g_old)
@@ -252,8 +245,8 @@ class SelectReactor:
             busy = False
             res = select.select(self._fds, [], [], timeout)
             eventtime = self.monotonic()
+            busy = True
             for fd in res[0]:
-                busy = True
                 fd.callback(eventtime)
                 if g_dispatch is not self._g_dispatch:
                     self._end_greenlet(g_dispatch)
@@ -311,8 +304,8 @@ class PollReactor(SelectReactor):
             busy = False
             res = self._poll.poll(int(math.ceil(timeout * 1000.)))
             eventtime = self.monotonic()
+            busy = True
             for fd, event in res:
-                busy = True
                 self._fds[fd](eventtime)
                 if g_dispatch is not self._g_dispatch:
                     self._end_greenlet(g_dispatch)
@@ -348,8 +341,8 @@ class EPollReactor(SelectReactor):
             busy = False
             res = self._epoll.poll(timeout)
             eventtime = self.monotonic()
+            busy = True
             for fd, event in res:
-                busy = True
                 self._fds[fd](eventtime)
                 if g_dispatch is not self._g_dispatch:
                     self._end_greenlet(g_dispatch)

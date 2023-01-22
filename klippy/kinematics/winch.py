@@ -17,7 +17,7 @@ class WinchKinematics:
             stepper_config = config.getsection(name)
             s = stepper.PrinterStepper(stepper_config)
             self.steppers.append(s)
-            a = tuple([stepper_config.getfloat('anchor_' + n) for n in 'xyz'])
+            a = tuple(stepper_config.getfloat(f'anchor_{n}') for n in 'xyz')
             self.anchors.append(a)
             s.setup_itersolve('winch_stepper_alloc', *a)
             s.set_trapq(toolhead.get_trapq())

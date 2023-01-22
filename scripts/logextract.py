@@ -40,9 +40,8 @@ class GatherConfig:
         if comment is not None:
             self.comments.append(comment)
     def write_file(self):
-        f = open(self.filename, 'wb')
-        f.write('\n'.join(self.comments + self.config_lines).strip() + '\n')
-        f.close()
+        with open(self.filename, 'wb') as f:
+            f.write('\n'.join(self.comments + self.config_lines).strip() + '\n')
 
 
 ######################################################################
@@ -56,11 +55,8 @@ class TMCUartHelper:
         # Generate a CRC8-ATM value for a bytearray
         crc = 0
         for b in data:
-            for i in range(8):
-                if (crc >> 7) ^ (b & 0x01):
-                    crc = (crc << 1) ^ 0x07
-                else:
-                    crc = (crc << 1)
+            for _ in range(8):
+                crc = (crc << 1) ^ 0x07 if (crc >> 7) ^ (b & 0x01) else (crc << 1)
                 crc &= 0xff
                 b >>= 1
         return crc
@@ -102,7 +98,7 @@ class TMCUartHelper:
         # Verify start/stop bits and crc
         encoded_data = self._encode_read(0xf5, addr, reg)
         if data != encoded_data:
-            return "Invalid: %s" % (self.pretty_print(addr, reg),)
+            return f"Invalid: {self.pretty_print(addr, reg)}"
         return self.pretty_print(addr, reg)
     def _decode_reg(self, data):
         # Extract a uart read response message
@@ -118,14 +114,12 @@ class TMCUartHelper:
         reg = (mval >> 21) & 0xff
         val = ((((mval >> 31) & 0xff) << 24) | (((mval >> 41) & 0xff) << 16)
                | (((mval >> 51) & 0xff) << 8) | ((mval >> 61) & 0xff))
-        sync = 0xf5
-        if addr == 0xff:
-            sync = 0x05
+        sync = 0x05 if addr == 0xff else 0xf5
         # Verify start/stop bits and crc
         encoded_data = self._encode_write(sync, addr, reg, val)
         if data != encoded_data:
             #print("Got %s vs %s" % (repr(data), repr(encoded_data)))
-            return "Invalid:%s" % (self.pretty_print(addr, reg, val),)
+            return f"Invalid:{self.pretty_print(addr, reg, val)}"
         return self.pretty_print(addr, reg, val)
     def pretty_print(self, addr, reg, val=None):
         if val is None:
@@ -153,20 +147,22 @@ count_s = r"(?P<count>[0-9]+)"
 time_s = r"(?P<time>[0-9]+[.][0-9]+)"
 esttime_s = r"(?P<esttime>[0-9]+[.][0-9]+)"
 shortseq_s = r"(?P<shortseq>[0-9a-f])"
-stats_r = re.compile(r"^Stats " + time_s + ": ")
-serial_dump_r = re.compile(r"^Dumping serial stats: .*" + stats_seq_s)
-send_dump_r = re.compile(r"^Dumping send queue " + count_s + " messages$")
-sent_r = re.compile(r"^Sent " + count_s + " " + esttime_s + " " + time_s
-                    + " [0-9]+: seq: 1" + shortseq_s + ",")
-receive_dump_r = re.compile(r"^Dumping receive queue " + count_s + " messages$")
-receive_r = re.compile(r"^Receive: " + count_s + " " + time_s + " " + esttime_s
-                    + " [0-9]+: seq: 1" + shortseq_s + ",")
-gcode_r = re.compile(r"^Read " + time_s + r": (?P<gcode>['\"].*)$")
+stats_r = re.compile(f"^Stats {time_s}: ")
+serial_dump_r = re.compile(f"^Dumping serial stats: .*{stats_seq_s}")
+send_dump_r = re.compile(f"^Dumping send queue {count_s} messages$")
+sent_r = re.compile(
+    f"^Sent {count_s} {esttime_s} {time_s} [0-9]+: seq: 1{shortseq_s},"
+)
+receive_dump_r = re.compile(f"^Dumping receive queue {count_s} messages$")
+receive_r = re.compile(
+    f"^Receive: {count_s} {time_s} {esttime_s} [0-9]+: seq: 1{shortseq_s},"
+)
+gcode_r = re.compile(f"^Read {time_s}" + r": (?P<gcode>['\"].*)$")
 gcode_state_r = re.compile(r"^gcode state: ")
 varlist_split_r = re.compile(r"([^ ]+)=")
 clock_r = re.compile(r"^clocksync state: .* clock_est=\((?P<st>[^ ]+)"
                      + r" (?P<sc>[0-9]+) (?P<f>[^ ]+)\)")
-repl_seq_r = re.compile(r": seq: 1" + shortseq_s)
+repl_seq_r = re.compile(f": seq: 1{shortseq_s}")
 repl_clock_r = re.compile(r"clock=(?P<clock>[0-9]+)(?: |$)")
 repl_uart_r = re.compile(r"tmcuart_(?:response|send) oid=[0-9]+"
                          + r" (?:read|write)=(?P<msg>(?:'[^']*'"
@@ -200,7 +196,7 @@ class GatherShutdown:
             configs_by_id = {c.config_num: c for c in configs.values()}
             config = configs_by_id[max(configs_by_id.keys())]
             config.add_comment(format_comment(line_num, recent_lines[-1][1]))
-            self.comments.append("# config %s" % (config.filename,))
+            self.comments.append(f"# config {config.filename}")
         self.stats_stream = []
         self.gcode_stream = []
         self.gcode_state = ''
@@ -257,8 +253,8 @@ class GatherShutdown:
         min_ts = 0
         max_ts = 999999999999
         for mcu, info in self.mcus.items():
-            sname = '%s:send_seq' % (mcu,)
-            rname = '%s:receive_seq' % (mcu,)
+            sname = f'{mcu}:send_seq'
+            rname = f'{mcu}:receive_seq'
             if sname not in keyparts:
                 continue
             sseq = int(keyparts[sname])
@@ -279,13 +275,15 @@ class GatherShutdown:
         def clock_update(m):
             return m.group(0).rstrip() + "(%.6f) " % (
                 self.trans_clock(int(m.group('clock')), ts),)
+
         line = repl_clock_r.sub(clock_update, line)
         def uart_update(m):
             msg = TMCUartHelper().parse_msg(ast.literal_eval(m.group('msg')))
-            return m.group(0).rstrip() + "%s " % (msg,)
+            return f"{m.group(0).rstrip()}{msg} "
+
         line = repl_uart_r.sub(uart_update, line)
         if mcu_name != 'mcu':
-            line = "mcu '%s': %s" % (mcu_name, line)
+            line = f"mcu '{mcu_name}': {line}"
         return line
     def add_line(self, line_num, line):
         self.parse_line(line_num, line)
@@ -394,15 +392,13 @@ class GatherShutdown:
         out = [i for s in streams for i in s]
         out.sort()
         out = [i[2] for i in out]
-        f = open(self.filename, 'wb')
-        f.write('\n'.join(self.comments + out))
-        f.close()
+        with open(self.filename, 'wb') as f:
+            f.write('\n'.join(self.comments + out))
         # Produce output gcode stream
         if self.gcode_stream:
             data = [ast.literal_eval(gc[3]) for gc in self.gcode_stream]
-            f = open(self.gcode_filename, 'wb')
-            f.write(self.gcode_state + ''.join(data))
-            f.close()
+            with open(self.gcode_filename, 'wb') as f:
+                f.write(self.gcode_state + ''.join(data))
 
 
 ######################################################################

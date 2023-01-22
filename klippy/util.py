@@ -67,9 +67,8 @@ def dump_mcu_build():
     # Try to log last mcu config
     dump_file_stats(build_dir, '.config')
     try:
-        f = open(os.path.join(build_dir, '.config'), 'r')
-        data = f.read(32*1024)
-        f.close()
+        with open(os.path.join(build_dir, '.config'), 'r') as f:
+            data = f.read(32*1024)
         logging.info("========= Last MCU build config =========\n%s"
                      "=======================", data)
     except:
@@ -77,13 +76,12 @@ def dump_mcu_build():
     # Try to log last mcu build version
     dump_file_stats(build_dir, 'out/klipper.dict')
     try:
-        f = open(os.path.join(build_dir, 'out/klipper.dict'), 'r')
-        data = f.read(32*1024)
-        f.close()
+        with open(os.path.join(build_dir, 'out/klipper.dict'), 'r') as f:
+            data = f.read(32*1024)
         data = json.loads(data)
         logging.info("Last MCU build version: %s", data.get('version', ''))
         logging.info("Last MCU build tools: %s", data.get('build_versions', ''))
-        cparts = ["%s=%s" % (k, v) for k, v in data.get('config', {}).items()]
+        cparts = [f"{k}={v}" for k, v in data.get('config', {}).items()]
         logging.info("Last MCU build config: %s", " ".join(cparts))
     except:
         pass
@@ -112,9 +110,8 @@ setup_python2_wrappers()
 
 def get_cpu_info():
     try:
-        f = open('/proc/cpuinfo', 'r')
-        data = f.read()
-        f.close()
+        with open('/proc/cpuinfo', 'r') as f:
+            data = f.read()
     except (IOError, OSError) as e:
         logging.debug("Exception on read /proc/cpuinfo: %s",
                       traceback.format_exc())
@@ -152,6 +149,4 @@ def get_git_version(from_file=True):
     except:
         logging.debug("Exception on run: %s", traceback.format_exc())
 
-    if from_file:
-        return get_version_from_file(klippy_src)
-    return "?"
+    return get_version_from_file(klippy_src) if from_file else "?"

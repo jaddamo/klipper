@@ -61,6 +61,7 @@ def background_coordinate_descent(printer, adj_params, params, error_func):
             return
         child_conn.send((False, res))
         child_conn.close()
+
     # Start a process to perform the calculation
     calc_proc = multiprocessing.Process(target=wrapper)
     calc_proc.daemon = True
@@ -77,7 +78,7 @@ def background_coordinate_descent(printer, adj_params, params, error_func):
     # Return results
     is_err, res = parent_conn.recv()
     if is_err:
-        raise Exception("Error in coordinate descent: %s" % (res,))
+        raise Exception(f"Error in coordinate descent: {res}")
     calc_proc.join()
     parent_conn.close()
     return res

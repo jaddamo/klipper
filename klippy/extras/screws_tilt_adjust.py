@@ -20,7 +20,7 @@ class ScrewsTiltAdjust:
                 break
             screw_coord = config.getfloatlist(prefix, count=2)
             screw_name = "screw at %.3f,%.3f" % screw_coord
-            screw_name = config.get(prefix + "_name", screw_name)
+            screw_name = config.get(f"{prefix}_name", screw_name)
             self.screws.append((screw_coord, screw_name))
         if len(self.screws) < 3:
             raise config.error("screws_tilt_adjust: Must have "
@@ -52,8 +52,8 @@ class ScrewsTiltAdjust:
             direction = direction.upper()
             if direction not in ('CW', 'CCW'):
                 raise gcmd.error(
-                    "Error on '%s': DIRECTION must be either CW or CCW" % (
-                        gcmd.get_commandline(),))
+                    f"Error on '{gcmd.get_commandline()}': DIRECTION must be either CW or CCW"
+                )
         self.direction = direction
         self.probe_helper.start_probe(gcmd)
 
@@ -69,7 +69,8 @@ class ScrewsTiltAdjust:
                     or (not is_clockwise_thread and self.direction == 'CCW'))
             min_or_max = max if use_max else min
             i_base, z_base = min_or_max(
-                enumerate([pos[2] for pos in positions]), key=lambda v: v[1])
+                enumerate(pos[2] for pos in positions), key=lambda v: v[1]
+            )
         else:
             # First screw is the base position used for comparison
             i_base, z_base = 0, positions[0][2]
@@ -82,8 +83,11 @@ class ScrewsTiltAdjust:
             if i == i_base:
                 # Show the results
                 self.gcode.respond_info(
-                    "%s : x=%.1f, y=%.1f, z=%.5f" %
-                    (name + ' (base)', coord[0], coord[1], z))
+                    (
+                        "%s : x=%.1f, y=%.1f, z=%.5f"
+                        % (f'{name} (base)', coord[0], coord[1], z)
+                    )
+                )
             else:
                 # Calculate how knob must be adjusted for other positions
                 diff = z_base - z
@@ -106,8 +110,8 @@ class ScrewsTiltAdjust:
                     (name, coord[0], coord[1], z, sign, full_turns, minutes))
         if self.max_diff and any((d > self.max_diff) for d in screw_diff):
             raise self.gcode.error(
-                "bed level exceeds configured limits ({}mm)! " \
-                "Adjust screws and restart print.".format(self.max_diff))
+                f"bed level exceeds configured limits ({self.max_diff}mm)! Adjust screws and restart print."
+            )
 
 def load_config(config):
     return ScrewsTiltAdjust(config)

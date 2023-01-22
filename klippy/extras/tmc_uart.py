@@ -17,9 +17,9 @@ class MCU_analog_mux:
         ppins = mcu.get_printer().lookup_object("pins")
         select_pin_params = [ppins.lookup_pin(spd, can_invert=True)
                              for spd in select_pins_desc]
-        self.oids = [self.mcu.create_oid() for pp in select_pin_params]
+        self.oids = [self.mcu.create_oid() for _ in select_pin_params]
         self.pins = [pp['pin'] for pp in select_pin_params]
-        self.pin_values = tuple([-1 for pp in select_pin_params])
+        self.pin_values = tuple(-1 for _ in select_pin_params)
         for oid, pin in zip(self.oids, self.pins):
             self.mcu.add_config_cmd("config_digital_out oid=%d pin=%s"
                                     " value=0 default_value=0 max_duration=0"
@@ -41,7 +41,7 @@ class MCU_analog_mux:
         if pins != self.pins:
             raise self.mcu.get_printer().config_error(
                 "All TMC mux instances must use identical pins")
-        return tuple([not pp['invert'] for pp in select_pin_params])
+        return tuple(not pp['invert'] for pp in select_pin_params)
     def activate(self, instance_id):
         for oid, old, new in zip(self.oids, self.pin_values, instance_id):
             if old != new:
@@ -122,11 +122,8 @@ class MCU_TMC_uart_bitbang:
         # Generate a CRC8-ATM value for a bytearray
         crc = 0
         for b in data:
-            for i in range(8):
-                if (crc >> 7) ^ (b & 0x01):
-                    crc = (crc << 1) ^ 0x07
-                else:
-                    crc = (crc << 1)
+            for _ in range(8):
+                crc = (crc << 1) ^ 0x07 if (crc >> 7) ^ (b & 0x01) else (crc << 1)
                 crc &= 0xff
                 b >>= 1
         return crc
@@ -167,9 +164,7 @@ class MCU_TMC_uart_bitbang:
                | (((mval >> 51) & 0xff) << 8) | ((mval >> 61) & 0xff))
         # Verify start/stop bits and crc
         encoded_data = self._encode_write(0x05, 0xff, reg, val)
-        if data != encoded_data:
-            return None
-        return val
+        return None if data != encoded_data else val
     def reg_read(self, instance_id, addr, reg):
         if self.analog_mux is not None:
             self.analog_mux.activate(instance_id)
@@ -225,12 +220,13 @@ class MCU_TMC_uart:
         reg = self.name_to_reg[reg_name]
         if self.printer.get_start_args().get('debugoutput') is not None:
             return 0
-        for retry in range(5):
+        for _ in range(5):
             val = self.mcu_uart.reg_read(self.instance_id, self.addr, reg)
             if val is not None:
                 return val
         raise self.printer.command_error(
-            "Unable to read tmc uart '%s' register %s" % (self.name, reg_name))
+            f"Unable to read tmc uart '{self.name}' register {reg_name}"
+        )
     def get_register(self, reg_name):
         with self.mutex:
             return self._do_get_register(reg_name)
@@ -239,7 +235,7 @@ class MCU_TMC_uart:
         if self.printer.get_start_args().get('debugoutput') is not None:
             return
         with self.mutex:
-            for retry in range(5):
+            for _ in range(5):
                 ifcnt = self.ifcnt
                 if ifcnt is None:
                     self.ifcnt = ifcnt = self._do_get_register("IFCNT")
@@ -249,4 +245,5 @@ class MCU_TMC_uart:
                 if self.ifcnt == (ifcnt + 1) & 0xff:
                     return
         raise self.printer.command_error(
-            "Unable to write tmc uart '%s' register %s" % (self.name, reg_name))
+            f"Unable to write tmc uart '{self.name}' register {reg_name}"
+        )

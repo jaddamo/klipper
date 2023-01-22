@@ -29,29 +29,31 @@ class ConfigWrapper:
                     acc_id = (self.section.lower(), option.lower())
                     self.access_tracking[acc_id] = default
                 return default
-            raise error("Option '%s' in section '%s' must be specified"
-                        % (option, self.section))
+            raise error(f"Option '{option}' in section '{self.section}' must be specified")
         try:
             v = parser(self.section, option)
         except self.error as e:
             raise
         except:
-            raise error("Unable to parse option '%s' in section '%s'"
-                        % (option, self.section))
+            raise error(f"Unable to parse option '{option}' in section '{self.section}'")
         if note_valid:
             self.access_tracking[(self.section.lower(), option.lower())] = v
         if minval is not None and v < minval:
-            raise error("Option '%s' in section '%s' must have minimum of %s"
-                        % (option, self.section, minval))
+            raise error(
+                f"Option '{option}' in section '{self.section}' must have minimum of {minval}"
+            )
         if maxval is not None and v > maxval:
-            raise error("Option '%s' in section '%s' must have maximum of %s"
-                        % (option, self.section, maxval))
+            raise error(
+                f"Option '{option}' in section '{self.section}' must have maximum of {maxval}"
+            )
         if above is not None and v <= above:
-            raise error("Option '%s' in section '%s' must be above %s"
-                        % (option, self.section, above))
+            raise error(
+                f"Option '{option}' in section '{self.section}' must be above {above}"
+            )
         if below is not None and v >= below:
-            raise self.error("Option '%s' in section '%s' must be below %s"
-                             % (option, self.section, below))
+            raise self.error(
+                f"Option '{option}' in section '{self.section}' must be below {below}"
+            )
         return v
     def get(self, option, default=sentinel, note_valid=True):
         return self._get_wrapper(self.fileconfig.get, option, default,
@@ -83,14 +85,16 @@ class ConfigWrapper:
             if pos:
                 # Nested list
                 parts = [p.strip() for p in value.split(seps[pos])]
-                return tuple([lparser(p, pos - 1) for p in parts if p])
+                return tuple(lparser(p, pos - 1) for p in parts if p)
             res = [parser(p.strip()) for p in value.split(seps[pos])]
             if count is not None and len(res) != count:
                 raise error("Option '%s' in section '%s' must have %d elements"
                             % (option, self.section, count))
             return tuple(res)
+
         def fcparser(section, option):
             return lparser(self.fileconfig.get(section, option), len(seps) - 1)
+
         return self._get_wrapper(fcparser, option, default,
                                  note_valid=note_valid)
     def getlist(self, option, default=sentinel, sep=',', count=None,
@@ -120,11 +124,9 @@ class ConfigWrapper:
         if not self.fileconfig.has_option(self.section, option):
             return
         if value is None:
-            msg = ("Option '%s' in section '%s' is deprecated."
-                   % (option, self.section))
+            msg = f"Option '{option}' in section '{self.section}' is deprecated."
         else:
-            msg = ("Value '%s' in option '%s' in section '%s' is deprecated."
-                   % (value, option, self.section))
+            msg = f"Value '{value}' in option '{option}' in section '{self.section}' is deprecated."
         pconfig = self.printer.lookup_object("configfile")
         pconfig.deprecate(self.section, option, value, msg)
 
@@ -150,11 +152,10 @@ class PrinterConfig:
         return self.printer
     def _read_config_file(self, filename):
         try:
-            f = open(filename, 'r')
-            data = f.read()
-            f.close()
+            with open(filename, 'r') as f:
+                data = f.read()
         except:
-            msg = "Unable to open config file %s" % (filename,)
+            msg = f"Unable to open config file {filename}"
             logging.exception(msg)
             raise error(msg)
         return data.replace('\r\n', '\n')
@@ -195,7 +196,7 @@ class PrinterConfig:
                 continue
             if pruned_line[0].isspace():
                 if is_dup_field:
-                    lines[lineno] = '#' + lines[lineno]
+                    lines[lineno] = f'#{lines[lineno]}'
                 continue
             is_dup_field = False
             if pruned_line[0] == '[':
@@ -204,7 +205,7 @@ class PrinterConfig:
             field = self.value_r.sub('', pruned_line)
             if config.fileconfig.has_option(section, field):
                 is_dup_field = True
-                lines[lineno] = '#' + lines[lineno]
+                lines[lineno] = f'#{lines[lineno]}'
         return "\n".join(lines)
     def _parse_config_buffer(self, buffer, filename, fileconfig):
         if not buffer:
@@ -221,7 +222,7 @@ class PrinterConfig:
         include_filenames = glob.glob(include_glob)
         if not include_filenames and not glob.has_magic(include_glob):
             # Empty set is OK if wildcard but not for direct file reference
-            raise error("Include file '%s' does not exist" % (include_glob,))
+            raise error(f"Include file '{include_glob}' does not exist")
         include_filenames.sort()
         for include_filename in include_filenames:
             include_data = self._read_config_file(include_filename)
@@ -231,7 +232,7 @@ class PrinterConfig:
     def _parse_config(self, data, filename, fileconfig, visited):
         path = os.path.abspath(filename)
         if path in visited:
-            raise error("Recursive include of config file '%s'" % (filename))
+            raise error(f"Recursive include of config file '{filename}'")
         visited.add(path)
         lines = data.split('\n')
         # Buffer lines between includes and parse as a unit so that overrides
@@ -276,8 +277,7 @@ class PrinterConfig:
         regular_config = self._build_config_wrapper(regular_data, filename)
         autosave_data = self._strip_duplicates(autosave_data, regular_config)
         self.autosave = self._build_config_wrapper(autosave_data, filename)
-        cfg = self._build_config_wrapper(regular_data + autosave_data, filename)
-        return cfg
+        return self._build_config_wrapper(regular_data + autosave_data, filename)
     def check_unused_options(self, config):
         fileconfig = config.fileconfig
         objects = dict(self.printer.lookup_objects())
@@ -291,13 +291,11 @@ class PrinterConfig:
         for section_name in fileconfig.sections():
             section = section_name.lower()
             if section not in valid_sections and section not in objects:
-                raise error("Section '%s' is not a valid config section"
-                            % (section,))
+                raise error(f"Section '{section}' is not a valid config section")
             for option in fileconfig.options(section_name):
                 option = option.lower()
                 if (section, option) not in access_tracking:
-                    raise error("Option '%s' is not valid in section '%s'"
-                                % (option, section))
+                    raise error(f"Option '{option}' is not valid in section '{section}'")
         # Setup get_status()
         self._build_status(config)
     def log_config(self, config):
@@ -358,8 +356,7 @@ class PrinterConfig:
         gcode = self.printer.lookup_object('gcode')
         # Create string containing autosave data
         autosave_data = self._build_config_string(self.autosave)
-        lines = [('#*# ' + l).strip()
-                 for l in autosave_data.split('\n')]
+        lines = [f'#*# {l}'.strip() for l in autosave_data.split('\n')]
         lines.insert(0, "\n" + AUTOSAVE_HEADER.rstrip())
         lines.append("")
         autosave_data = '\n'.join(lines)
@@ -379,17 +376,16 @@ class PrinterConfig:
         # Determine filenames
         datestr = time.strftime("-%Y%m%d_%H%M%S")
         backup_name = cfgname + datestr
-        temp_name = cfgname + "_autosave"
+        temp_name = f"{cfgname}_autosave"
         if cfgname.endswith(".cfg"):
             backup_name = cfgname[:-4] + datestr + ".cfg"
-            temp_name = cfgname[:-4] + "_autosave.cfg"
+            temp_name = f"{cfgname[:-4]}_autosave.cfg"
         # Create new config file with temporary name and swap with main config
         logging.info("SAVE_CONFIG to '%s' (backup in '%s')",
                      cfgname, backup_name)
         try:
-            f = open(temp_name, 'w')
-            f.write(data)
-            f.close()
+            with open(temp_name, 'w') as f:
+                f.write(data)
             os.rename(cfgname, backup_name)
             os.rename(temp_name, cfgname)
         except:

@@ -26,9 +26,9 @@ class MenuElement(object):
         self._manager = manager
         self._cursor = '>'
         # set class defaults and attributes from arguments
-        self._index = kwargs.get('index', None)
+        self._index = kwargs.get('index')
         self._enable = kwargs.get('enable', True)
-        self._name = kwargs.get('name', None)
+        self._name = kwargs.get('name')
         self._enable_tpl = self._name_tpl = None
         if config is not None:
             # overwrite class attributes from config
@@ -41,7 +41,7 @@ class MenuElement(object):
                 self._enable_tpl = manager.gcode_macro.load_template(
                     config, 'enable')
             # item namespace - used in relative paths
-            self._ns = str(" ".join(config.get_name().split(' ')[1:])).strip()
+            self._ns = " ".join(config.get_name().split(' ')[1:]).strip()
         else:
             # ns - item namespace key, used in item relative paths
             # $__id - generated id text variable
@@ -178,13 +178,10 @@ class MenuElement(object):
         return name.strip()
 
     def send_event(self, event, *args):
-        return self.manager.send_event(
-            "%s:%s" % (self.get_ns(), str(event)), *args)
+        return self.manager.send_event(f"{self.get_ns()}:{str(event)}", *args)
 
     def get_script(self, name):
-        if name in self._scripts:
-            return self._scripts[name]
-        return None
+        return self._scripts[name] if name in self._scripts else None
 
     def _run_script(self, name, context):
         _render = getattr(self._scripts[name], 'render', None)
@@ -199,8 +196,8 @@ class MenuElement(object):
             return self._scripts[name]
 
     def run_script(self, name, **kwargs):
-        event = kwargs.get('event', None)
-        context = kwargs.get('context', None)
+        event = kwargs.get('event')
+        context = kwargs.get('context')
         render_only = kwargs.get('render_only', False)
         result = ""
         # init context
@@ -214,7 +211,7 @@ class MenuElement(object):
             # run result as gcode
             self.manager.queue_gcode(result)
             # default behaviour
-            _handle = getattr(self, "handle_script_" + name, None)
+            _handle = getattr(self, f"handle_script_{name}", None)
             if callable(_handle):
                 _handle()
         return result
@@ -239,7 +236,7 @@ class MenuContainer(MenuElement):
             raise error(
                 'Abstract MenuContainer cannot be instantiated directly')
         super(MenuContainer, self).__init__(manager, config, **kwargs)
-        self._populate_cb = kwargs.get('populate', None)
+        self._populate_cb = kwargs.get('populate')
         self._cursor = '>'
         self.__selected = None
         self._allitems = []
@@ -260,7 +257,7 @@ class MenuContainer(MenuElement):
         return isinstance(item, MenuElement)
 
     def is_editing(self):
-        return any([item.is_editing() for item in self._items])
+        return any(item.is_editing() for item in self._items)
 
     def stop_editing(self):
         for item in self._items:
@@ -307,8 +304,9 @@ class MenuContainer(MenuElement):
             self._parents.append(parents)
 
     def assert_recursive_relation(self, parents=None):
-        assert self not in (parents or self._parents), \
-            "Recursive relation of '%s' container" % (self.get_ns(),)
+        assert self not in (
+            parents or self._parents
+        ), f"Recursive relation of '{self.get_ns()}' container"
 
     def insert_item(self, s, index=None):
         self._insert_item(s, index)
@@ -317,7 +315,7 @@ class MenuContainer(MenuElement):
         item, name = self._lookup_item(s)
         if item is not None:
             if not self.is_accepted(item):
-                raise error("Menu item '%s'is not accepted!" % str(type(item)))
+                raise error(f"Menu item '{str(type(item))}'is not accepted!")
             if isinstance(item, (MenuElement)):
                 item.init()
             if isinstance(item, (MenuContainer)):
@@ -432,7 +430,7 @@ class MenuInput(MenuCommand):
     def __init__(self, manager, config, **kwargs):
         super(MenuInput, self).__init__(manager, config, **kwargs)
         # set class defaults and attributes from arguments
-        self._input = kwargs.get('input', None)
+        self._input = kwargs.get('input')
         self._input_min = kwargs.get('input_min', -999999.0)
         self._input_max = kwargs.get('input_max', 999999.0)
         self._input_step = kwargs.get('input_step', 1.0)
@@ -612,8 +610,7 @@ class MenuList(MenuContainer):
         # clamps viewport
         self._viewport_top = max(0, min(self._viewport_top, len(self) - nrows))
         try:
-            y = 0
-            for row in range(self._viewport_top, self._viewport_top + nrows):
+            for y, row in enumerate(range(self._viewport_top, self._viewport_top + nrows)):
                 text = ""
                 prefix = ""
                 suffix = ""
@@ -653,8 +650,6 @@ class MenuList(MenuContainer):
                 if suffix:
                     display.draw_text(
                         y, self.manager.cols - slen, suffix, eventtime)
-                # next display row
-                y += 1
         except Exception:
             logging.exception('List drawing error')
 
@@ -669,8 +664,11 @@ class MenuVSDList(MenuList):
         if sdcard is not None:
             files = sdcard.get_file_list()
             for fname, fsize in files:
-                self.insert_item(self.manager.menuitem_from(
-                    'command', name=repr(fname), gcode='M23 /%s' % str(fname)))
+                self.insert_item(
+                    self.manager.menuitem_from(
+                        'command', name=repr(fname), gcode=f'M23 /{str(fname)}'
+                    )
+                )
 
 
 menu_items = {
@@ -741,7 +739,7 @@ class MenuManager:
             self.timer = 0
 
     def send_event(self, event, *args):
-        return self.printer.send_event("menu:" + str(event), *args)
+        return self.printer.send_event(f"menu:{str(event)}", *args)
 
     def is_running(self):
         return self.running
@@ -781,7 +779,7 @@ class MenuManager:
     def get_context(self, cxt=None):
         context = dict(self.context)
         if isinstance(cxt, dict):
-            context.update(cxt)
+            context |= cxt
         return context
 
     def update_context(self, eventtime):
@@ -798,9 +796,8 @@ class MenuManager:
             raise error("Wrong type, expected MenuContainer")
         container.populate()
         top = self.stack_peek()
-        if top is not None:
-            if isinstance(top, MenuList):
-                top.run_script('leave')
+        if top is not None and isinstance(top, MenuList):
+            top.run_script('leave')
         if isinstance(container, MenuList):
             container.run_script('enter')
         if not container.is_editing():
@@ -825,19 +822,19 @@ class MenuManager:
                     container.run_script('leave')
                 if isinstance(top, MenuList):
                     top.run_script('enter')
-            else:
-                if isinstance(container, MenuList):
-                    container.run_script('leave')
+            elif isinstance(container, MenuList):
+                container.run_script('leave')
         return container
 
     def stack_size(self):
         return len(self.menustack)
 
     def stack_peek(self, lvl=0):
-        container = None
-        if self.stack_size() > lvl:
-            container = self.menustack[self.stack_size() - lvl - 1]
-        return container
+        return (
+            self.menustack[self.stack_size() - lvl - 1]
+            if self.stack_size() > lvl
+            else None
+        )
 
     def screen_update_event(self, eventtime):
         # screen update
@@ -858,11 +855,10 @@ class MenuManager:
             current = container.selected_item()
             if isinstance(current, MenuInput) and current.is_editing():
                 current.dec_value(fast_rate)
+            elif self._reverse_navigation is True:
+                container.select_next()  # reverse
             else:
-                if self._reverse_navigation is True:
-                    container.select_next()  # reverse
-                else:
-                    container.select_prev()  # normal
+                container.select_prev()  # normal
 
     def down(self, fast_rate=False):
         container = self.stack_peek()
@@ -871,11 +867,10 @@ class MenuManager:
             current = container.selected_item()
             if isinstance(current, MenuInput) and current.is_editing():
                 current.inc_value(fast_rate)
+            elif self._reverse_navigation is True:
+                container.select_prev()  # reverse
             else:
-                if self._reverse_navigation is True:
-                    container.select_prev()  # reverse
-                else:
-                    container.select_next()  # normal
+                container.select_next()  # normal
 
     def back(self, force=False, update=True):
         container = self.stack_peek()
@@ -915,12 +910,17 @@ class MenuManager:
 
     def push_container(self, menu):
         container = self.stack_peek()
-        if self.running and isinstance(container, MenuContainer):
-            if (isinstance(menu, MenuContainer)
-                    and not container.is_editing()
-                    and menu is not container):
-                self.stack_push(menu)
-                return True
+        if (
+            self.running
+            and isinstance(container, MenuContainer)
+            and (
+                isinstance(menu, MenuContainer)
+                and not container.is_editing()
+                and menu is not container
+            )
+        ):
+            self.stack_push(menu)
+            return True
         return False
 
     def press(self, event='click'):
@@ -988,14 +988,11 @@ class MenuManager:
         if name in self.menuitems:
             return self.menuitems[name]
         if default is sentinel:
-            raise self.printer.config_error(
-                "Unknown menuitem '%s'" % (name,))
+            raise self.printer.config_error(f"Unknown menuitem '{name}'")
         return default
 
     def lookup_children(self, ns):
-        if ns in self.children:
-            return list(self.children[ns])
-        return list()
+        return list(self.children[ns]) if ns in self.children else []
 
     def load_config(self, *args):
         cfg = None
@@ -1003,8 +1000,7 @@ class MenuManager:
         try:
             cfg = self.pconfig.read_config(filename)
         except Exception:
-            raise self.printer.config_error(
-                "Cannot load config '%s'" % (filename,))
+            raise self.printer.config_error(f"Cannot load config '{filename}'")
         if cfg:
             self.load_menuitems(cfg)
         return cfg

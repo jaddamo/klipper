@@ -52,10 +52,7 @@ class SDCardLoop:
         if count == 0: # Infinite loop
             self.sdcard.set_file_position(position)
             self.loop_stack.append((0, position))
-        elif count == 1: # Last repeat
-            # Nothing to do
-            pass
-        else:
+        elif count != 1:
             # At the next opportunity, seek back to the start of the loop
             self.sdcard.set_file_position(position)
             # Decrement the count by 1, and add the position back to the stack

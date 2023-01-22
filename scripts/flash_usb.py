@@ -12,15 +12,14 @@ class error(Exception):
 # Attempt to enter bootloader via 1200 baud request
 def enter_bootloader(device):
     try:
-        f = open(device, 'rb')
-        fd = f.fileno()
-        fcntl.ioctl(fd, termios.TIOCMBIS, struct.pack('I', termios.TIOCM_DTR))
-        t = termios.tcgetattr(fd)
-        t[4] = t[5] = termios.B1200
-        sys.stderr.write("Entering bootloader on %s\n" % (device,))
-        termios.tcsetattr(fd, termios.TCSANOW, t)
-        fcntl.ioctl(fd, termios.TIOCMBIC, struct.pack('I', termios.TIOCM_DTR))
-        f.close()
+        with open(device, 'rb') as f:
+            fd = f.fileno()
+            fcntl.ioctl(fd, termios.TIOCMBIS, struct.pack('I', termios.TIOCM_DTR))
+            t = termios.tcgetattr(fd)
+            t[4] = t[5] = termios.B1200
+            sys.stderr.write("Entering bootloader on %s\n" % (device,))
+            termios.tcsetattr(fd, termios.TCSANOW, t)
+            fcntl.ioctl(fd, termios.TIOCMBIC, struct.pack('I', termios.TIOCM_DTR))
     except (IOError, OSError) as e:
         pass
 
@@ -28,7 +27,7 @@ def enter_bootloader(device):
 def translate_serial_to_tty(device):
     ttyname = os.path.realpath(device)
     for fname in os.listdir('/dev/serial/by-path/'):
-        fname = '/dev/serial/by-path/' + fname
+        fname = f'/dev/serial/by-path/{fname}'
         if os.path.realpath(fname) == ttyname:
             return ttyname, fname
     return ttyname, ttyname
@@ -38,15 +37,15 @@ def translate_serial_to_usb_path(device):
     realdev = os.path.realpath(device)
     fname = os.path.basename(realdev)
     try:
-        lname = os.readlink("/sys/class/tty/" + fname)
+        lname = os.readlink(f"/sys/class/tty/{fname}")
     except OSError as e:
         raise error("Unable to find tty device")
     ttypath_r = re.compile(r".*/usb\d+.*/(?P<path>\d+-[0-9.]+):\d+\.\d+/.*")
     m = ttypath_r.match(lname)
     if m is None:
         raise error("Unable to find tty usb device")
-    devpath = os.path.realpath("/sys/class/tty/%s/device" % (fname,))
-    return m.group("path"), devpath
+    devpath = os.path.realpath(f"/sys/class/tty/{fname}/device")
+    return m["path"], devpath
 
 # Wait for a given path to appear
 def wait_path(path, alt_path=None):
@@ -106,7 +105,7 @@ def call_dfuutil(flags, binfile, sudo):
 def flash_dfuutil(device, binfile, extra_flags=[], sudo=True):
     hexfmt_r = re.compile(r"^[a-fA-F0-9]{4}:[a-fA-F0-9]{4}$")
     if hexfmt_r.match(device.strip()):
-        call_dfuutil(["-d", ","+device.strip()] + extra_flags, binfile, sudo)
+        call_dfuutil(["-d", f",{device.strip()}"] + extra_flags, binfile, sudo)
         return
     buspath, devpath = translate_serial_to_usb_path(device)
     enter_bootloader(device)
@@ -166,9 +165,9 @@ def flash_atsamd(options, binfile):
 def rp2040_flash(devpath, binfile):
     args = ["lib/rp2040_flash/rp2040_flash", binfile]
     if len(devpath) > 0:
-        with open(devpath + "/busnum") as f:
+        with open(f"{devpath}/busnum") as f:
             bus = f.read().strip()
-        with open(devpath + "/devnum") as f:
+        with open(f"{devpath}/devnum") as f:
             addr = f.read().strip()
         args += [bus, addr]
     sys.stderr.write(" ".join(args) + '\n\n')
@@ -315,8 +314,7 @@ def main():
                 flash_func = func
                 break
     if flash_func is None:
-        opts.error("USB flashing is not supported for MCU '%s'"
-                   % (options.mcutype,))
+        opts.error(f"USB flashing is not supported for MCU '{options.mcutype}'")
     if not options.device:
         sys.stderr.write("\nPlease specify FLASH_DEVICE\n\n")
         sys.exit(-1)

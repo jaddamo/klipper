@@ -43,8 +43,7 @@ class ADXL345QueryHelper:
         toolhead.wait_moves()
         self.cconn.finalize()
     def _get_raw_samples(self):
-        raw_samples = self.cconn.get_messages()
-        if raw_samples:
+        if raw_samples := self.cconn.get_messages():
             self.raw_samples = raw_samples
         return self.raw_samples
     def has_valid_samples(self):
@@ -69,7 +68,7 @@ class ADXL345QueryHelper:
         raw_samples = self._get_raw_samples()
         if not raw_samples:
             return self.samples
-        total = sum([len(m['params']['data']) for m in raw_samples])
+        total = sum(len(m['params']['data']) for m in raw_samples)
         count = 0
         self.samples = samples = [None] * total
         for msg in raw_samples:
@@ -89,13 +88,13 @@ class ADXL345QueryHelper:
                 os.nice(20)
             except:
                 pass
-            f = open(filename, "w")
-            f.write("#time,accel_x,accel_y,accel_z\n")
-            samples = self.samples or self.get_samples()
-            for t, accel_x, accel_y, accel_z in samples:
-                f.write("%.6f,%.6f,%.6f,%.6f\n" % (
-                    t, accel_x, accel_y, accel_z))
-            f.close()
+            with open(filename, "w") as f:
+                f.write("#time,accel_x,accel_y,accel_z\n")
+                samples = self.samples or self.get_samples()
+                for t, accel_x, accel_y, accel_z in samples:
+                    f.write("%.6f,%.6f,%.6f,%.6f\n" % (
+                        t, accel_x, accel_y, accel_z))
+
         write_proc = multiprocessing.Process(target=write_impl)
         write_proc.daemon = True
         write_proc.start()
@@ -141,12 +140,11 @@ class ADXLCommandHelper:
         bg_client.finish_measurements()
         # Write data to file
         if self.name == "adxl345":
-            filename = "/tmp/adxl345-%s.csv" % (name,)
+            filename = f"/tmp/adxl345-{name}.csv"
         else:
-            filename = "/tmp/adxl345-%s-%s.csv" % (self.name, name,)
+            filename = f"/tmp/adxl345-{self.name}-{name}.csv"
         bg_client.write_to_file(filename)
-        gcmd.respond_info("Writing raw accelerometer data to %s file"
-                          % (filename,))
+        gcmd.respond_info(f"Writing raw accelerometer data to {filename} file")
     cmd_ACCELEROMETER_QUERY_help = "Query accelerometer for the current values"
     def cmd_ACCELEROMETER_QUERY(self, gcmd):
         aclient = self.chip.start_internal_client()
@@ -231,7 +229,7 @@ class ADXL345:
         am = {'x': (0, SCALE), 'y': (1, SCALE), 'z': (2, SCALE),
               '-x': (0, -SCALE), '-y': (1, -SCALE), '-z': (2, -SCALE)}
         axes_map = config.getlist('axes_map', ('x','y','z'), count=3)
-        if any([a not in am for a in axes_map]):
+        if any(a not in am for a in axes_map):
             raise config.error("Invalid adxl345 axes_map parameter")
         self.axes_map = [am[a.strip()] for a in axes_map]
         self.data_rate = config.getint('rate', 3200)
@@ -417,10 +415,15 @@ class ADXL345:
         if not raw_samples:
             return {}
         samples = self._extract_samples(raw_samples)
-        if not samples:
-            return {}
-        return {'data': samples, 'errors': self.last_error_count,
-                'overflows': self.last_limit_count}
+        return (
+            {
+                'data': samples,
+                'errors': self.last_error_count,
+                'overflows': self.last_limit_count,
+            }
+            if samples
+            else {}
+        )
     def _api_startstop(self, is_start):
         if is_start:
             self._start_measurements()

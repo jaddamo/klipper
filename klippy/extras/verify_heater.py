@@ -22,9 +22,7 @@ class HeaterCheck:
         self.hysteresis = config.getfloat('hysteresis', 5., minval=0.)
         self.max_error = config.getfloat('max_error', 120., minval=0.)
         self.heating_gain = config.getfloat('heating_gain', 2., above=0.)
-        default_gain_time = 20.
-        if self.heater_name == 'heater_bed':
-            default_gain_time = 60.
+        default_gain_time = 60. if self.heater_name == 'heater_bed' else 20.
         self.check_gain_time = config.getfloat(
             'check_gain_time', default_gain_time, minval=1.)
         self.approaching_target = self.starting_approach = False
@@ -84,7 +82,7 @@ class HeaterCheck:
         self.last_target = target
         return eventtime + 1.
     def heater_fault(self):
-        msg = "Heater %s not heating at expected rate" % (self.heater_name,)
+        msg = f"Heater {self.heater_name} not heating at expected rate"
         logging.error(msg)
         self.printer.invoke_shutdown(msg + HINT_THERMAL)
         return self.printer.get_reactor().NEVER

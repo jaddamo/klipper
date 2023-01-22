@@ -20,7 +20,7 @@ class PhaseCalc:
         self.is_primary = self.stats_only = False
     def lookup_tmc(self):
         for driver in TRINAMIC_DRIVERS:
-            driver_name = "%s %s" % (driver, self.name)
+            driver_name = f"{driver} {self.name}"
             module = self.printer.lookup_object(driver_name, None)
             if module is not None:
                 self.tmc_module = module
@@ -38,8 +38,7 @@ class PhaseCalc:
             mcu_phase_offset, phases = self.tmc_module.get_phase_offset()
             if mcu_phase_offset is None:
                 if self.printer.get_start_args().get('debugoutput') is None:
-                    raise self.printer.command_error("Stepper %s phase unknown"
-                                                     % (self.name,))
+                    raise self.printer.command_error(f"Stepper {self.name} phase unknown")
                 mcu_phase_offset = 0
         phase = (trig_mcu_pos + mcu_phase_offset) % self.phases
         self.phase_history[phase] += 1
@@ -69,8 +68,7 @@ class EndstopPhase:
         if trigger_phase is not None:
             p, ps = config.getintlist('trigger_phase', sep='/', count=2)
             if p >= ps:
-                raise config.error("Invalid trigger_phase '%s'"
-                                   % (trigger_phase,))
+                raise config.error(f"Invalid trigger_phase '{trigger_phase}'")
             self.endstop_phase = self.phase_calc.convert_phase(p, ps)
         self.endstop_align_zero = config.getboolean('endstop_align_zero', False)
         self.endstop_accuracy = config.getfloat('endstop_accuracy', None,
@@ -141,7 +139,7 @@ class EndstopPhases:
         phase_calc = self.tracking.get(stepper_name)
         if phase_calc is None:
             # Check if stepper has an endstop_phase config section defined
-            mod_name = "endstop_phase %s" % (stepper_name,)
+            mod_name = f"endstop_phase {stepper_name}"
             m = self.printer.lookup_object(mod_name, None)
             if m is not None:
                 phase_calc = m.phase_calc
@@ -173,16 +171,14 @@ class EndstopPhases:
             return
         phase_calc = self.tracking.get(stepper_name)
         if phase_calc is None or phase_calc.phase_history is None:
-            raise gcmd.error("Stats not available for stepper %s"
-                             % (stepper_name,))
+            raise gcmd.error(f"Stats not available for stepper {stepper_name}")
         endstop_phase, phases = self.generate_stats(stepper_name, phase_calc)
         if not phase_calc.is_primary:
             return
         configfile = self.printer.lookup_object('configfile')
-        section = 'endstop_phase %s' % (stepper_name,)
+        section = f'endstop_phase {stepper_name}'
         configfile.remove_section(section)
-        configfile.set(section, "trigger_phase",
-                       "%s/%s" % (endstop_phase, phases))
+        configfile.set(section, "trigger_phase", f"{endstop_phase}/{phases}")
         gcmd.respond_info(
             "The SAVE_CONFIG command will update the printer config\n"
             "file with these parameters and restart the printer.")
@@ -195,7 +191,7 @@ class EndstopPhases:
         res = []
         for i in range(phases):
             phase = i + half_phases
-            cost = sum([wph[j] * abs(j-phase) for j in range(i, i+phases)])
+            cost = sum(wph[j] * abs(j-phase) for j in range(i, i+phases))
             res.append((cost, phase))
         res.sort()
         best = res[0][1]

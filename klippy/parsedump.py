@@ -8,9 +8,8 @@ import os, sys, logging
 import msgproto
 
 def read_dictionary(filename):
-    dfile = open(filename, 'rb')
-    dictionary = dfile.read()
-    dfile.close()
+    with open(filename, 'rb') as dfile:
+        dictionary = dfile.read()
     return dictionary
 
 def main():

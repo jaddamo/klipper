@@ -7,8 +7,7 @@
 class HomingOverride:
     def __init__(self, config):
         self.printer = config.get_printer()
-        self.start_pos = [config.getfloat('set_position_' + a, None)
-                          for a in 'xyz']
+        self.start_pos = [config.getfloat(f'set_position_{a}', None) for a in 'xyz']
         self.axes = config.get('axes', 'XYZ').upper()
         gcode_macro = self.printer.load_object(config, 'gcode_macro')
         self.template = gcode_macro.load_template(config, 'gcode')
@@ -23,13 +22,7 @@ class HomingOverride:
             self.prev_G28(gcmd)
             return
 
-        # if no axis is given as parameter we assume the override
-        no_axis = True
-        for axis in 'XYZ':
-            if gcmd.get(axis, None) is not None:
-                no_axis = False
-                break
-
+        no_axis = all(gcmd.get(axis, None) is None for axis in 'XYZ')
         if no_axis:
             override = True
         else:

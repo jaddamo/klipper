@@ -117,9 +117,9 @@ class GenKinematicPosition:
         status = self.amanager.get_initial_status()
         kin = status['configfile']['settings']['printer']['kinematics']
         if kin not in ['cartesian', 'corexy']:
-            raise amanager.error("Unsupported kinematics '%s'" % (kin,))
+            raise amanager.error(f"Unsupported kinematics '{kin}'")
         if stepper not in ['stepper_x', 'stepper_y', 'stepper_z']:
-            raise amanager.error("Unknown stepper '%s'" % (stepper,))
+            raise amanager.error(f"Unknown stepper '{stepper}'")
         if kin == 'corexy' and stepper in ['stepper_x', 'stepper_y']:
             self.source1 = 'trapq(toolhead,x)'
             self.source2 = 'trapq(toolhead,y)'
@@ -130,7 +130,7 @@ class GenKinematicPosition:
             amanager.setup_dataset(self.source1)
             amanager.setup_dataset(self.source2)
         else:
-            self.source1 = 'trapq(toolhead,%s)' % (stepper[-1:],)
+            self.source1 = f'trapq(toolhead,{stepper[-1:]})'
             self.source2 = None
             self.generate_data = self.generate_data_passthrough
             amanager.setup_dataset(self.source1)
@@ -164,11 +164,8 @@ class GenCorexyPosition:
         amanager.setup_dataset(self.source1)
         amanager.setup_dataset(self.source2)
     def get_label(self):
-        axis = 'x'
-        if not self.is_plus:
-            axis = 'y'
-        return {'label': 'Derived %s position' % (axis,),
-                'units': 'Position\n(mm)'}
+        axis = 'x' if self.is_plus else 'y'
+        return {'label': f'Derived {axis} position', 'units': 'Position\n(mm)'}
     def generate_data(self):
         datasets = self.amanager.get_datasets()
         data1 = datasets[self.source1]
@@ -251,10 +248,10 @@ class AnalyzerManager:
         else:
             cls = AHandlers.get(name_parts[0])
             if cls is None:
-                raise self.error("Unknown dataset '%s'" % (name,))
+                raise self.error(f"Unknown dataset '{name}'")
             num_param = len(name_parts) - 1
             if num_param < cls.ParametersMin or num_param > cls.ParametersMax:
-                raise self.error("Invalid parameters to dataset '%s'" % (name,))
+                raise self.error(f"Invalid parameters to dataset '{name}'")
             hdl = cls(self, name_parts)
             self.gen_datasets[name] = hdl
         self.datasets[name] = []
@@ -263,8 +260,8 @@ class AnalyzerManager:
         hdl = self.raw_datasets.get(dataset)
         if hdl is None:
             hdl = self.gen_datasets.get(dataset)
-            if hdl is None:
-                raise error("Unknown dataset '%s'" % (dataset,))
+        if hdl is None:
+            raise error(f"Unknown dataset '{dataset}'")
         return hdl.get_label()
     def generate_datasets(self):
         # Generate raw data

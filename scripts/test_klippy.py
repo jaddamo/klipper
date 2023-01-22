@@ -37,38 +37,34 @@ class TestCase:
         config_fname = gcode_fname = dict_fnames = None
         should_fail = multi_tests = False
         gcode = []
-        f = open(self.fname, 'r')
-        for line in f:
-            cpos = line.find('#')
-            if cpos >= 0:
-                line = line[:cpos]
-            parts = line.strip().split()
-            if not parts:
-                continue
-            if parts[0] == "CONFIG":
-                if config_fname is not None:
-                    # Multiple tests in same file
-                    if not multi_tests:
+        with open(self.fname, 'r') as f:
+            for line in f:
+                cpos = line.find('#')
+                if cpos >= 0:
+                    line = line[:cpos]
+                parts = line.strip().split()
+                if not parts:
+                    continue
+                if parts[0] == "CONFIG":
+                    if config_fname is not None and not multi_tests:
                         multi_tests = True
                         self.launch_test(config_fname, dict_fnames,
                                          gcode_fname, gcode, should_fail)
-                config_fname = self.relpath(parts[1])
-                if multi_tests:
-                    self.launch_test(config_fname, dict_fnames,
-                                     gcode_fname, gcode, should_fail)
-            elif parts[0] == "DICTIONARY":
-                dict_fnames = [self.relpath(parts[1], 'dict')]
-                for mcu_dict in parts[2:]:
-                    mcu, fname = mcu_dict.split('=', 1)
-                    dict_fnames.append('%s=%s' % (
-                        mcu.strip(), self.relpath(fname.strip(), 'dict')))
-            elif parts[0] == "GCODE":
-                gcode_fname = self.relpath(parts[1])
-            elif parts[0] == "SHOULD_FAIL":
-                should_fail = True
-            else:
-                gcode.append(line.strip())
-        f.close()
+                    config_fname = self.relpath(parts[1])
+                    if multi_tests:
+                        self.launch_test(config_fname, dict_fnames,
+                                         gcode_fname, gcode, should_fail)
+                elif parts[0] == "DICTIONARY":
+                    dict_fnames = [self.relpath(parts[1], 'dict')]
+                    for mcu_dict in parts[2:]:
+                        mcu, fname = mcu_dict.split('=', 1)
+                        dict_fnames.append(f"{mcu.strip()}={self.relpath(fname.strip(), 'dict')}")
+                elif parts[0] == "GCODE":
+                    gcode_fname = self.relpath(parts[1])
+                elif parts[0] == "SHOULD_FAIL":
+                    should_fail = True
+                else:
+                    gcode.append(line.strip())
         if not multi_tests:
             self.launch_test(config_fname, dict_fnames,
                              gcode_fname, gcode, should_fail)
@@ -78,9 +74,8 @@ class TestCase:
         if gcode_fname is None:
             gcode_fname = self.relpath(TEMP_GCODE_FILE, 'temp')
             gcode_is_temp = True
-            f = open(gcode_fname, 'w')
-            f.write('\n'.join(gcode + ['']))
-            f.close()
+            with open(gcode_fname, 'w') as f:
+                f.write('\n'.join(gcode + ['']))
         elif gcode:
             raise error("Can't specify both a gcode file and gcode commands")
         if config_fname is None:
@@ -97,8 +92,7 @@ class TestCase:
         if not self.verbose:
             args += ['-l', TEMP_LOG_FILE]
         res = subprocess.call(args)
-        is_fail = (should_fail and not res) or (not should_fail and res)
-        if is_fail:
+        if is_fail := (should_fail and not res) or (not should_fail and res):
             if not self.verbose:
                 self.show_log()
             if should_fail:
@@ -126,9 +120,8 @@ class TestCase:
             return "internal error"
         return "success"
     def show_log(self):
-        f = open(TEMP_LOG_FILE, 'r')
-        data = f.read()
-        f.close()
+        with open(TEMP_LOG_FILE, 'r') as f:
+            data = f.read()
         sys.stdout.write(data)
 
 

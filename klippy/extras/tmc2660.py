@@ -14,98 +14,80 @@ Registers = {
 
 ReadRegisters = [ "READRSP@RDSEL0", "READRSP@RDSEL1", "READRSP@RDSEL2" ]
 
-Fields = {}
-
-Fields["DRVCTRL"] = {
-    "mres": 0x0f,
-    "dedge": 0x01 << 8,
-    "intpol": 0x01 << 9,
-}
-
-Fields["CHOPCONF"] = {
-    "toff": 0x0f,
-    "hstrt": 0x7 << 4,
-    "hend": 0x0f << 7,
-    "hdec": 0x03 << 11,
-    "rndtf": 0x01 << 13,
-    "chm": 0x01 << 14,
-    "tbl": 0x03 << 15
-}
-
-Fields["SMARTEN"] = {
-    "semin" : 0x0f,
-    "seup": 0x03 << 5,
-    "semax": 0x0f << 8,
-    "sedn": 0x03 << 13,
-    "seimin": 0x01 << 15
-}
-
-Fields["SGCSCONF"] = {
-    "cs": 0x1f,
-    "sgt": 0x7F << 8,
-    "sfilt": 0x01 << 16
-}
-
-Fields["DRVCONF"] = {
-    "rdsel": 0x03 << 4,
-    "vsense": 0x01 << 6,
-    "sdoff": 0x01 << 7,
-    "ts2g": 0x03 << 8,
-    "diss2g": 0x01 << 10,
-    "slpl": 0x03 << 12,
-    "slph": 0x03 << 14,
-    "tst": 0x01 << 16
-}
-
-Fields["READRSP@RDSEL0"] = {
-    "stallguard": 0x01 << 4,
-    "ot": 0x01 << 5,
-    "otpw": 0x01 << 6,
-    "s2ga": 0x01 << 7,
-    "s2gb": 0x01 << 8,
-    "ola": 0x01 << 9,
-    "olb": 0x01 << 10,
-    "stst": 0x01 << 11,
-    "mstep": 0x3ff << 14
-}
-
-Fields["READRSP@RDSEL1"] = {
-    "stallguard": 0x01 << 4,
-    "ot": 0x01 << 5,
-    "otpw": 0x01 << 6,
-    "s2ga": 0x01 << 7,
-    "s2gb": 0x01 << 8,
-    "ola": 0x01 << 9,
-    "olb": 0x01 << 10,
-    "stst": 0x01 << 11,
-    "sg_result": 0x3ff << 14
-}
-
-Fields["READRSP@RDSEL2"] = {
-    "stallguard": 0x01 << 4,
-    "ot": 0x01 << 5,
-    "otpw": 0x01 << 6,
-    "s2ga": 0x01 << 7,
-    "s2gb": 0x01 << 8,
-    "ola": 0x01 << 9,
-    "olb": 0x01 << 10,
-    "stst": 0x01 << 11,
-    "se": 0x1f << 14,
-    "sg_result@rdsel2": 0x1f << 19
+Fields = {
+    "DRVCTRL": {"mres": 0x0F, "dedge": 0x01 << 8, "intpol": 0x01 << 9},
+    "CHOPCONF": {
+        "toff": 0x0F,
+        "hstrt": 0x7 << 4,
+        "hend": 0x0F << 7,
+        "hdec": 0x03 << 11,
+        "rndtf": 0x01 << 13,
+        "chm": 0x01 << 14,
+        "tbl": 0x03 << 15,
+    },
+    "SMARTEN": {
+        "semin": 0x0F,
+        "seup": 0x03 << 5,
+        "semax": 0x0F << 8,
+        "sedn": 0x03 << 13,
+        "seimin": 0x01 << 15,
+    },
+    "SGCSCONF": {"cs": 0x1F, "sgt": 0x7F << 8, "sfilt": 0x01 << 16},
+    "DRVCONF": {
+        "rdsel": 0x03 << 4,
+        "vsense": 0x01 << 6,
+        "sdoff": 0x01 << 7,
+        "ts2g": 0x03 << 8,
+        "diss2g": 0x01 << 10,
+        "slpl": 0x03 << 12,
+        "slph": 0x03 << 14,
+        "tst": 0x01 << 16,
+    },
+    "READRSP@RDSEL0": {
+        "stallguard": 0x01 << 4,
+        "ot": 0x01 << 5,
+        "otpw": 0x01 << 6,
+        "s2ga": 0x01 << 7,
+        "s2gb": 0x01 << 8,
+        "ola": 0x01 << 9,
+        "olb": 0x01 << 10,
+        "stst": 0x01 << 11,
+        "mstep": 0x3FF << 14,
+    },
+    "READRSP@RDSEL1": {
+        "stallguard": 0x01 << 4,
+        "ot": 0x01 << 5,
+        "otpw": 0x01 << 6,
+        "s2ga": 0x01 << 7,
+        "s2gb": 0x01 << 8,
+        "ola": 0x01 << 9,
+        "olb": 0x01 << 10,
+        "stst": 0x01 << 11,
+        "sg_result": 0x3FF << 14,
+    },
+    "READRSP@RDSEL2": {
+        "stallguard": 0x01 << 4,
+        "ot": 0x01 << 5,
+        "otpw": 0x01 << 6,
+        "s2ga": 0x01 << 7,
+        "s2gb": 0x01 << 8,
+        "ola": 0x01 << 9,
+        "olb": 0x01 << 10,
+        "stst": 0x01 << 11,
+        "se": 0x1F << 14,
+        "sg_result@rdsel2": 0x1F << 19,
+    },
 }
 
 SignedFields = ["sgt"]
 
-FieldFormatters = dict(tmc2130.FieldFormatters)
-FieldFormatters.update({
+FieldFormatters = dict(tmc2130.FieldFormatters) | {
     "chm": (lambda v: "1(constant toff)" if v else "0(spreadCycle)"),
     "vsense": (lambda v: "1(165mV)" if v else "0(305mV)"),
     "sdoff": (lambda v: "1(Step/Dir disabled!)" if v else ""),
     "diss2g": (lambda v: "1(Short to GND disabled!)" if v else ""),
     "se": (lambda v: ("%d" % v) if v else "0(Reset?)"),
-})
-
-
+}
 ######################################################################
 # TMC stepper current config helper
 ######################################################################
@@ -240,10 +222,12 @@ class TMC2660:
         set_config_field(config, "hend", 3)
         set_config_field(config, "hstrt", 3)
         set_config_field(config, "toff", 4)
-        if not self.fields.get_field("chm"):
-            if (self.fields.get_field("hstrt") +
-                self.fields.get_field("hend")) > 15:
-                raise config.error("driver_HEND + driver_HSTRT must be <= 15")
+        if (
+            not self.fields.get_field("chm")
+            and (self.fields.get_field("hstrt") + self.fields.get_field("hend"))
+            > 15
+        ):
+            raise config.error("driver_HEND + driver_HSTRT must be <= 15")
         # SMARTEN
         set_config_field(config, "seimin", 0)
         set_config_field(config, "sedn", 0)

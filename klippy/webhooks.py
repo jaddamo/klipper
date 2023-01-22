@@ -59,10 +59,10 @@ class WebRequest:
     def get(self, item, default=Sentinel, types=None):
         value = self.params.get(item, default)
         if value is Sentinel:
-            raise WebRequestError("Missing Argument [%s]" % (item,))
+            raise WebRequestError(f"Missing Argument [{item}]")
         if (types is not None and type(value) not in types
             and item in self.params):
-            raise WebRequestError("Invalid Argument Type [%s]" % (item,))
+            raise WebRequestError(f"Invalid Argument Type [{item}]")
         return value
 
     def get_str(self, item, default=Sentinel):
@@ -92,9 +92,7 @@ class WebRequest:
     def finish(self):
         if self.id is None:
             return None
-        rtype = "result"
-        if self.is_error:
-            rtype = "error"
+        rtype = "error" if self.is_error else "result"
         if self.response is None:
             # No error was set and the user never executed
             # send, default response is {}
@@ -154,9 +152,7 @@ class ServerSocket:
             os.remove(file_path)
         except OSError:
             if os.path.exists(file_path):
-                logging.exception(
-                    "webhooks: Unable to delete socket file '%s'"
-                    % (file_path))
+                logging.exception(f"webhooks: Unable to delete socket file '{file_path}'")
                 raise
 
     def pop_client(self, client_id):
@@ -178,22 +174,30 @@ class ClientConnection:
         self.request_log = collections.deque([], REQUEST_LOG_SIZE)
 
     def dump_request_log(self):
-        out = []
-        out.append("Dumping %d requests for client %d"
-                   % (len(self.request_log), self.uid,))
-        for eventtime, request in self.request_log:
-            out.append("Received %f: %s" % (eventtime, request))
+        out = [
+            (
+                "Dumping %d requests for client %d"
+                % (
+                    len(self.request_log),
+                    self.uid,
+                )
+            )
+        ]
+        out.extend(
+            "Received %f: %s" % (eventtime, request)
+            for eventtime, request in self.request_log
+        )
         logging.info("\n".join(out))
 
     def set_client_info(self, client_info, state_msg=None):
         if state_msg is None:
-            state_msg = "Client info %s" % (repr(client_info),)
+            state_msg = f"Client info {repr(client_info)}"
         logging.info("webhooks client %s: %s", self.uid, state_msg)
-        log_id = "webhooks %s" % (self.uid,)
+        log_id = f"webhooks {self.uid}"
         if client_info is None:
             self.printer.set_rollover_info(log_id, None, log=False)
             return
-        rollover_msg = "webhooks client %s: %s" % (self.uid, repr(client_info))
+        rollover_msg = f"webhooks client {self.uid}: {repr(client_info)}"
         self.printer.set_rollover_info(log_id, rollover_msg, log=False)
 
     def close(self):
@@ -233,8 +237,7 @@ class ClientConnection:
             try:
                 web_request = WebRequest(self, req)
             except Exception:
-                logging.exception("webhooks: Error decoding Server Request %s"
-                                  % (req))
+                logging.exception(f"webhooks: Error decoding Server Request {req}")
                 continue
             self.reactor.register_callback(
                 lambda e, s=self, wr=web_request: s._process_request(wr))
@@ -246,8 +249,7 @@ class ClientConnection:
         except self.printer.command_error as e:
             web_request.set_error(WebRequestError(str(e)))
         except Exception as e:
-            msg = ("Internal Error on WebRequest: %s"
-                   % (web_request.get_method()))
+            msg = f"Internal Error on WebRequest: {web_request.get_method()}"
             logging.exception(msg)
             web_request.set_error(WebRequestError(str(e)))
             self.printer.invoke_shutdown(msg)
@@ -312,12 +314,12 @@ class WebHooks:
         prev_key, prev_values = prev
         if prev_key != key:
             raise self.printer.config_error(
-                "mux endpoint %s %s %s may have only one key (%s)"
-                % (path, key, value, prev_key))
+                f"mux endpoint {path} {key} {value} may have only one key ({prev_key})"
+            )
         if value in prev_values:
             raise self.printer.config_error(
-                "mux endpoint %s %s %s already registered (%s)"
-                % (path, key, value, prev_values))
+                f"mux endpoint {path} {key} {value} already registered ({prev_values})"
+            )
         prev_values[value] = callback
 
     def _handle_mux(self, web_request):
@@ -327,8 +329,7 @@ class WebHooks:
         else:
             key_param = web_request.get(key)
         if key_param not in values:
-            raise web_request.error("The value '%s' is not valid for %s"
-                                    % (key_param, key))
+            raise web_request.error(f"The value '{key_param}' is not valid for {key}")
         values[key_param](web_request)
 
     def _handle_list_endpoints(self, web_request):
@@ -366,7 +367,7 @@ class WebHooks:
     def get_callback(self, path):
         cb = self._endpoints.get(path, None)
         if cb is None:
-            msg = "webhooks: No registered callback for path '%s'" % (path)
+            msg = f"webhooks: No registered callback for path '{path}'"
             logging.info(msg)
             raise WebRequestError(msg)
         return cb
@@ -377,20 +378,20 @@ class WebHooks:
 
     def call_remote_method(self, method, **kwargs):
         if method not in self._remote_methods:
-            raise self.printer.command_error(
-                "Remote method '%s' not registered" % (method))
+            raise self.printer.command_error(f"Remote method '{method}' not registered")
         conn_map = self._remote_methods[method]
         valid_conns = {}
         for conn, template in conn_map.items():
             if not conn.is_closed():
                 valid_conns[conn] = template
                 out = {'params': kwargs}
-                out.update(template)
+                out |= template
                 conn.send(out)
         if not valid_conns:
             del self._remote_methods[method]
             raise self.printer.command_error(
-                "No active connections for method '%s'" % (method))
+                f"No active connections for method '{method}'"
+            )
         self._remote_methods[method] = valid_conns
 
 class GCodeHelper:
@@ -466,7 +467,7 @@ class QueryStatusHelper:
             # Query each requested printer object
             cquery = {}
             for obj_name, req_items in subscription.items():
-                res = query.get(obj_name, None)
+                res = query.get(obj_name)
                 if res is None:
                     po = self.printer.lookup_object(obj_name, None)
                     if po is None or not hasattr(po, 'get_status'):

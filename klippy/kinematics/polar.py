@@ -74,9 +74,7 @@ class PolarKinematics:
         homing_axes = homing_state.get_axes()
         home_xy = 0 in homing_axes or 1 in homing_axes
         home_z = 2 in homing_axes
-        updated_axes = []
-        if home_xy:
-            updated_axes = [0, 1]
+        updated_axes = [0, 1] if home_xy else []
         if home_z:
             updated_axes.append(2)
         homing_state.set_axes(updated_axes)

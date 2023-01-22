@@ -978,9 +978,8 @@ class Kconfig(object):
 
         self.config_prefix = os.getenv("CONFIG_", "CONFIG_")
         # Regular expressions for parsing .config files
-        self._set_match = _re_match(self.config_prefix + r"([^=]+)=(.*)")
-        self._unset_match = _re_match(r"# {}([^ ]+) is not set".format(
-            self.config_prefix))
+        self._set_match = _re_match(f"{self.config_prefix}([^=]+)=(.*)")
+        self._unset_match = _re_match(f"# {self.config_prefix}([^ ]+) is not set")
 
         self.config_header = os.getenv("KCONFIG_CONFIG_HEADER", "")
         self.header_header = os.getenv("KCONFIG_AUTOHEADER_HEADER", "")
@@ -1028,10 +1027,9 @@ class Kconfig(object):
 
         # Add any user-defined preprocessor functions
         try:
-            self._functions.update(
-                importlib.import_module(
-                    os.getenv("KCONFIG_FUNCTIONS", "kconfigfunctions")
-                ).functions)
+            self._functions |= importlib.import_module(
+                os.getenv("KCONFIG_FUNCTIONS", "kconfigfunctions")
+            ).functions
         except ImportError:
             pass
 
@@ -1107,7 +1105,7 @@ class Kconfig(object):
         # KCONFIG_STRICT is an older alias for KCONFIG_WARN_UNDEF, supported
         # for backwards compatibility
         if os.getenv("KCONFIG_WARN_UNDEF") == "y" or \
-           os.getenv("KCONFIG_STRICT") == "y":
+               os.getenv("KCONFIG_STRICT") == "y":
 
             self._check_undef_syms()
 
@@ -1216,18 +1214,16 @@ class Kconfig(object):
         if filename is None:
             filename = standard_config_filename()
             if not exists(filename) and \
-               not exists(join(self.srctree, filename)):
+                   not exists(join(self.srctree, filename)):
                 defconfig = self.defconfig_filename
                 if defconfig is None:
-                    return "Using default symbol values (no '{}')" \
-                           .format(filename)
+                    return f"Using default symbol values (no '{filename}')"
 
-                msg = " default configuration '{}' (no '{}')" \
-                      .format(defconfig, filename)
+                msg = f" default configuration '{defconfig}' (no '{filename}')"
                 filename = defconfig
 
         if not msg:
-            msg = " configuration '{}'".format(filename)
+            msg = f" configuration '{filename}'"
 
         # Disable the warning about assigning to symbols without prompts. This
         # is normal and expected within a .config file.
@@ -1270,8 +1266,7 @@ class Kconfig(object):
                 # The C tools ignore trailing whitespace
                 line = line.rstrip()
 
-                match = set_match(line)
-                if match:
+                if match := set_match(line):
                     name, val = match.groups()
                     sym = get_sym(name)
                     if not sym or not sym.nodes:
@@ -1285,11 +1280,11 @@ class Kconfig(object):
                                 and val.startswith(("y", "n")) or
                                 sym.orig_type is TRISTATE
                                 and val.startswith(("y", "m", "n"))):
-                            self._warn("'{}' is not a valid value for the {} "
-                                       "symbol {}. Assignment ignored."
-                                       .format(val, TYPE_TO_STR[sym.orig_type],
-                                               sym.name_and_loc),
-                                       filename, linenr)
+                            self._warn(
+                                f"'{val}' is not a valid value for the {TYPE_TO_STR[sym.orig_type]} symbol {sym.name_and_loc}. Assignment ignored.",
+                                filename,
+                                linenr,
+                            )
                             continue
 
                         val = val[0]
@@ -1301,7 +1296,7 @@ class Kconfig(object):
 
                             prev_mode = sym.choice.user_value
                             if prev_mode is not None and \
-                               TRI_TO_STR[prev_mode] != val:
+                                   TRI_TO_STR[prev_mode] != val:
 
                                 self._warn("both m and y assigned to symbols "
                                            "within the same choice",
@@ -1313,10 +1308,11 @@ class Kconfig(object):
                     elif sym.orig_type is STRING:
                         match = _conf_string_match(val)
                         if not match:
-                            self._warn("malformed string literal in "
-                                       "assignment to {}. Assignment ignored."
-                                       .format(sym.name_and_loc),
-                                       filename, linenr)
+                            self._warn(
+                                f"malformed string literal in assignment to {sym.name_and_loc}. Assignment ignored.",
+                                filename,
+                                linenr,
+                            )
                             continue
 
                         val = unescape(match.group(1))
@@ -1329,9 +1325,7 @@ class Kconfig(object):
                         # lines or comments. 'line' has already been
                         # rstrip()'d, so blank lines show up as "" here.
                         if line and not line.lstrip().startswith("#"):
-                            self._warn("ignoring malformed line '{}'"
-                                       .format(line),
-                                       filename, linenr)
+                            self._warn(f"ignoring malformed line '{line}'", filename, linenr)
 
                         continue
 
@@ -1371,8 +1365,10 @@ class Kconfig(object):
         self.missing_syms.append((name, val))
         if self.warn_assign_undef:
             self._warn(
-                "attempt to assign the value '{}' to the undefined symbol {}"
-                .format(val, name), filename, linenr)
+                f"attempt to assign the value '{val}' to the undefined symbol {name}",
+                filename,
+                linenr,
+            )
 
     def _assigned_twice(self, sym, new_val, filename, linenr):
         # Called when a symbol is assigned more than once in a .config file
@@ -1383,13 +1379,14 @@ class Kconfig(object):
         else:
             user_val = sym.user_value
 
-        msg = '{} set more than once. Old value "{}", new value "{}".'.format(
-            sym.name_and_loc, user_val, new_val)
+        msg = f'{sym.name_and_loc} set more than once. Old value "{user_val}", new value "{new_val}".'
 
-        if user_val == new_val:
-            if self.warn_assign_redun:
-                self._warn(msg, filename, linenr)
-        elif self.warn_assign_override:
+        if (
+            user_val == new_val
+            and self.warn_assign_redun
+            or user_val != new_val
+            and self.warn_assign_override
+        ):
             self._warn(msg, filename, linenr)
 
     def load_allconfig(self, filename):

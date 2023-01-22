@@ -35,8 +35,9 @@ def plot_accel(data, logname):
     first_time = data[0, 0]
     times = data[:,0] - first_time
     fig, axes = matplotlib.pyplot.subplots(nrows=3, sharex=True)
-    axes[0].set_title("\n".join(wrap("Accelerometer data (%s)" % (logname,),
-                                     MAX_TITLE_LENGTH)))
+    axes[0].set_title(
+        "\n".join(wrap(f"Accelerometer data ({logname})", MAX_TITLE_LENGTH))
+    )
     axis_names = ['x', 'y', 'z']
     for i in range(len(axis_names)):
         avg = data[:,i+1].mean()
@@ -91,8 +92,13 @@ def plot_frequency(datas, lognames, max_freq):
     freqs = freqs[freqs <= max_freq]
 
     fig, ax = matplotlib.pyplot.subplots()
-    ax.set_title("\n".join(wrap(
-        "Frequency response (%s)" % (', '.join(lognames)), MAX_TITLE_LENGTH)))
+    ax.set_title(
+        "\n".join(
+            wrap(
+                f"Frequency response ({', '.join(lognames)})", MAX_TITLE_LENGTH
+            )
+        )
+    )
     ax.set_xlabel('Frequency (Hz)')
     ax.set_ylabel('Power spectral density')
 
@@ -141,8 +147,9 @@ def plot_specgram(data, logname, max_freq, axis):
     pdata, bins, t = calc_specgram(data, axis)
 
     fig, ax = matplotlib.pyplot.subplots()
-    ax.set_title("\n".join(wrap("Spectrogram %s (%s)" % (axis, logname),
-                 MAX_TITLE_LENGTH)))
+    ax.set_title(
+        "\n".join(wrap(f"Spectrogram {axis} ({logname})", MAX_TITLE_LENGTH))
+    )
     ax.pcolormesh(t, bins, pdata, norm=matplotlib.colors.LogNorm())
     ax.set_ylim([0., max_freq])
     ax.set_ylabel('frequency (hz)')

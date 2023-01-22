@@ -78,143 +78,114 @@ ReadRegisters = [
     "PWM_AUTO", "TSTEP"
 ]
 
-Fields = {}
-Fields["COOLCONF"] = {
-    "semin":                    0x0F << 0,
-    "seup":                     0x03 << 5,
-    "semax":                    0x0F << 8,
-    "sedn":                     0x03 << 13,
-    "seimin":                   0x01 << 15,
-    "sgt":                      0x7F << 16,
-    "sfilt":                    0x01 << 24
+Fields = {
+    "COOLCONF": {
+        "semin": 0x0F << 0,
+        "seup": 0x03 << 5,
+        "semax": 0x0F << 8,
+        "sedn": 0x03 << 13,
+        "seimin": 0x01 << 15,
+        "sgt": 0x7F << 16,
+        "sfilt": 0x01 << 24,
+    },
+    "CHOPCONF": {
+        "toff": 0x0F << 0,
+        "hstrt": 0x07 << 4,
+        "hend": 0x0F << 7,
+        "fd3": 0x01 << 11,
+        "disfdcc": 0x01 << 12,
+        "chm": 0x01 << 14,
+        "tbl": 0x03 << 15,
+        "vhighfs": 0x01 << 18,
+        "vhighchm": 0x01 << 19,
+        "tpfd": 0x0F << 20,
+        "mres": 0x0F << 24,
+        "intpol": 0x01 << 28,
+        "dedge": 0x01 << 29,
+        "diss2g": 0x01 << 30,
+        "diss2vs": 0x01 << 31,
+    },
+    "DRV_STATUS": {
+        "sg_result": 0x3FF << 0,
+        "s2vsa": 0x01 << 12,
+        "s2vsb": 0x01 << 13,
+        "stealth": 0x01 << 14,
+        "fsactive": 0x01 << 15,
+        "csactual": 0xFF << 16,
+        "stallguard": 0x01 << 24,
+        "ot": 0x01 << 25,
+        "otpw": 0x01 << 26,
+        "s2ga": 0x01 << 27,
+        "s2gb": 0x01 << 28,
+        "ola": 0x01 << 29,
+        "olb": 0x01 << 30,
+        "stst": 0x01 << 31,
+    },
+    "FACTORY_CONF": {"factory_conf": 0x1F << 0},
+    "GCONF": {
+        "recalibrate": 0x01 << 0,
+        "faststandstill": 0x01 << 1,
+        "en_pwm_mode": 0x01 << 2,
+        "multistep_filt": 0x01 << 3,
+        "shaft": 0x01 << 4,
+        "diag0_error": 0x01 << 5,
+        "diag0_otpw": 0x01 << 6,
+        "diag0_stall": 0x01 << 7,
+        "diag1_stall": 0x01 << 8,
+        "diag1_index": 0x01 << 9,
+        "diag1_onstate": 0x01 << 10,
+        "diag1_steps_skipped": 0x01 << 11,
+        "diag0_int_pushpull": 0x01 << 12,
+        "diag1_poscomp_pushpull": 0x01 << 13,
+        "small_hysteresis": 0x01 << 14,
+        "stop_enable": 0x01 << 15,
+        "direct_mode": 0x01 << 16,
+        "test_mode": 0x01 << 17,
+    },
+    "GSTAT": {"reset": 0x01 << 0, "drv_err": 0x01 << 1, "uv_cp": 0x01 << 2},
+    "GLOBALSCALER": {"globalscaler": 0xFF << 0},
+    "IHOLD_IRUN": {
+        "ihold": 0x1F << 0,
+        "irun": 0x1F << 8,
+        "iholddelay": 0x0F << 16,
+    },
+    "IOIN": {
+        "refl_step": 0x01 << 0,
+        "refr_dir": 0x01 << 1,
+        "encb_dcen_cfg4": 0x01 << 2,
+        "enca_dcin_cfg5": 0x01 << 3,
+        "drv_enn": 0x01 << 4,
+        "enc_n_dco_cfg6": 0x01 << 5,
+        "sd_mode": 0x01 << 6,
+        "swcomp_in": 0x01 << 7,
+        "version": 0xFF << 24,
+    },
+    "LOST_STEPS": {"lost_steps": 0xFFFFF << 0},
+    "MSCNT": {"mscnt": 0x3FF << 0},
+    "MSCURACT": {"cur_a": 0x1FF << 0, "cur_b": 0x1FF << 16},
+    "OTP_READ": {
+        "otp_fclktrim": 0x1F << 0,
+        "otp_s2_level": 0x01 << 5,
+        "otp_bbm": 0x01 << 6,
+        "otp_tbl": 0x01 << 7,
+    },
+    "PWM_AUTO": {"pwm_ofs_auto": 0xFF << 0, "pwm_grad_auto": 0xFF << 16},
+    "PWMCONF": {
+        "pwm_ofs": 0xFF << 0,
+        "pwm_grad": 0xFF << 8,
+        "pwm_freq": 0x03 << 16,
+        "pwm_autoscale": 0x01 << 18,
+        "pwm_autograd": 0x01 << 19,
+        "freewheel": 0x03 << 20,
+        "pwm_reg": 0x0F << 24,
+        "pwm_lim": 0x0F << 28,
+    },
+    "PWM_SCALE": {"pwm_scale_sum": 0xFF << 0, "pwm_scale_auto": 0x1FF << 16},
+    "TPOWERDOWN": {"tpowerdown": 0xFF << 0},
+    "TPWMTHRS": {"tpwmthrs": 0xFFFFF << 0},
+    "TCOOLTHRS": {"tcoolthrs": 0xFFFFF << 0},
+    "TSTEP": {"tstep": 0xFFFFF << 0},
 }
-Fields["CHOPCONF"] = {
-    "toff":                     0x0F << 0,
-    "hstrt":                    0x07 << 4,
-    "hend":                     0x0F << 7,
-    "fd3":                      0x01 << 11,
-    "disfdcc":                  0x01 << 12,
-    "chm":                      0x01 << 14,
-    "tbl":                      0x03 << 15,
-    "vhighfs":                  0x01 << 18,
-    "vhighchm":                 0x01 << 19,
-    "tpfd":                     0x0F << 20, # midrange resonances
-    "mres":                     0x0F << 24,
-    "intpol":                   0x01 << 28,
-    "dedge":                    0x01 << 29,
-    "diss2g":                   0x01 << 30,
-    "diss2vs":                  0x01 << 31
-}
-Fields["DRV_STATUS"] = {
-    "sg_result":                0x3FF << 0,
-    "s2vsa":                    0x01 << 12,
-    "s2vsb":                    0x01 << 13,
-    "stealth":                  0x01 << 14,
-    "fsactive":                 0x01 << 15,
-    "csactual":                 0xFF << 16,
-    "stallguard":               0x01 << 24,
-    "ot":                       0x01 << 25,
-    "otpw":                     0x01 << 26,
-    "s2ga":                     0x01 << 27,
-    "s2gb":                     0x01 << 28,
-    "ola":                      0x01 << 29,
-    "olb":                      0x01 << 30,
-    "stst":                     0x01 << 31
-}
-Fields["FACTORY_CONF"] = {
-    "factory_conf":             0x1F << 0
-}
-Fields["GCONF"] = {
-    "recalibrate":              0x01 << 0,
-    "faststandstill":           0x01 << 1,
-    "en_pwm_mode":              0x01 << 2,
-    "multistep_filt":           0x01 << 3,
-    "shaft":                    0x01 << 4,
-    "diag0_error":              0x01 << 5,
-    "diag0_otpw":               0x01 << 6,
-    "diag0_stall":              0x01 << 7,
-    "diag1_stall":              0x01 << 8,
-    "diag1_index":              0x01 << 9,
-    "diag1_onstate":            0x01 << 10,
-    "diag1_steps_skipped":      0x01 << 11,
-    "diag0_int_pushpull":       0x01 << 12,
-    "diag1_poscomp_pushpull":   0x01 << 13,
-    "small_hysteresis":         0x01 << 14,
-    "stop_enable":              0x01 << 15,
-    "direct_mode":              0x01 << 16,
-    "test_mode":                0x01 << 17
-}
-Fields["GSTAT"] = {
-    "reset":                    0x01 << 0,
-    "drv_err":                  0x01 << 1,
-    "uv_cp":                    0x01 << 2
-}
-Fields["GLOBALSCALER"] = {
-    "globalscaler":             0xFF << 0
-}
-Fields["IHOLD_IRUN"] = {
-    "ihold":                    0x1F << 0,
-    "irun":                     0x1F << 8,
-    "iholddelay":               0x0F << 16
-}
-Fields["IOIN"] = {
-    "refl_step":                0x01 << 0,
-    "refr_dir":                 0x01 << 1,
-    "encb_dcen_cfg4":           0x01 << 2,
-    "enca_dcin_cfg5":           0x01 << 3,
-    "drv_enn":                  0x01 << 4,
-    "enc_n_dco_cfg6":           0x01 << 5,
-    "sd_mode":                  0x01 << 6,
-    "swcomp_in":                0x01 << 7,
-    "version":                  0xFF << 24
-}
-Fields["LOST_STEPS"] = {
-    "lost_steps":               0xfffff << 0
-}
-Fields["MSCNT"] = {
-    "mscnt":                    0x3ff << 0
-}
-Fields["MSCURACT"] = {
-    "cur_a":                    0x1ff << 0,
-    "cur_b":                    0x1ff << 16
-}
-Fields["OTP_READ"] = {
-    "otp_fclktrim":             0x1f << 0,
-    "otp_s2_level":             0x01 << 5,
-    "otp_bbm":                  0x01 << 6,
-    "otp_tbl":                  0x01 << 7
-}
-Fields["PWM_AUTO"] = {
-    "pwm_ofs_auto":             0xff << 0,
-    "pwm_grad_auto":            0xff << 16
-}
-Fields["PWMCONF"] = {
-    "pwm_ofs":                  0xFF << 0,
-    "pwm_grad":                 0xFF << 8,
-    "pwm_freq":                 0x03 << 16,
-    "pwm_autoscale":            0x01 << 18,
-    "pwm_autograd":             0x01 << 19,
-    "freewheel":                0x03 << 20,
-    "pwm_reg":                  0x0F << 24,
-    "pwm_lim":                  0x0F << 28
-}
-Fields["PWM_SCALE"] = {
-    "pwm_scale_sum":            0xff << 0,
-    "pwm_scale_auto":           0x1ff << 16
-}
-Fields["TPOWERDOWN"] = {
-    "tpowerdown":               0xff << 0
-}
-Fields["TPWMTHRS"] = {
-    "tpwmthrs":                 0xfffff << 0
-}
-Fields["TCOOLTHRS"] = {
-    "tcoolthrs":                0xfffff << 0
-}
-Fields["TSTEP"] = {
-    "tstep":                    0xfffff << 0
-}
-
 SignedFields = ["cur_a", "cur_b", "sgt", "xactual", "vactual", "pwm_scale_auto"]
 
 FieldFormatters = dict(tmc2130.FieldFormatters)

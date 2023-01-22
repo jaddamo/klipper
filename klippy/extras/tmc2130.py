@@ -22,53 +22,100 @@ ReadRegisters = [
     "CHOPCONF", "DRV_STATUS", "PWM_SCALE", "LOST_STEPS",
 ]
 
-Fields = {}
-Fields["GCONF"] = {
-    "i_scale_analog": 1<<0, "internal_rsense": 1<<1, "en_pwm_mode": 1<<2,
-    "enc_commutation": 1<<3, "shaft": 1<<4, "diag0_error": 1<<5,
-    "diag0_otpw": 1<<6, "diag0_stall": 1<<7, "diag1_stall": 1<<8,
-    "diag1_index": 1<<9, "diag1_onstate": 1<<10, "diag1_steps_skipped": 1<<11,
-    "diag0_int_pushpull": 1<<12, "diag1_pushpull": 1<<13,
-    "small_hysteresis": 1<<14, "stop_enable": 1<<15, "direct_mode": 1<<16,
-    "test_mode": 1<<17
+Fields = {
+    "GCONF": {
+        "i_scale_analog": 1 << 0,
+        "internal_rsense": 1 << 1,
+        "en_pwm_mode": 1 << 2,
+        "enc_commutation": 1 << 3,
+        "shaft": 1 << 4,
+        "diag0_error": 1 << 5,
+        "diag0_otpw": 1 << 6,
+        "diag0_stall": 1 << 7,
+        "diag1_stall": 1 << 8,
+        "diag1_index": 1 << 9,
+        "diag1_onstate": 1 << 10,
+        "diag1_steps_skipped": 1 << 11,
+        "diag0_int_pushpull": 1 << 12,
+        "diag1_pushpull": 1 << 13,
+        "small_hysteresis": 1 << 14,
+        "stop_enable": 1 << 15,
+        "direct_mode": 1 << 16,
+        "test_mode": 1 << 17,
+    },
+    "GSTAT": {"reset": 1 << 0, "drv_err": 1 << 1, "uv_cp": 1 << 2},
+    "IOIN": {
+        "step": 1 << 0,
+        "dir": 1 << 1,
+        "dcen_cfg4": 1 << 2,
+        "dcin_cfg5": 1 << 3,
+        "drv_enn_cfg6": 1 << 4,
+        "dco": 1 << 5,
+        "version": 0xFF << 24,
+    },
+    "IHOLD_IRUN": {
+        "ihold": 0x1F << 0,
+        "irun": 0x1F << 8,
+        "iholddelay": 0x0F << 16,
+    },
+    "TPOWERDOWN": {"tpowerdown": 0xFF},
+    "TSTEP": {"tstep": 0xFFFFF},
+    "TPWMTHRS": {"tpwmthrs": 0xFFFFF},
+    "TCOOLTHRS": {"tcoolthrs": 0xFFFFF},
+    "THIGH": {"thigh": 0xFFFFF},
+    "MSCNT": {"mscnt": 0x3FF},
+    "MSCURACT": {"cur_a": 0x1FF, "cur_b": 0x1FF << 16},
+    "CHOPCONF": {
+        "toff": 0x0F,
+        "hstrt": 0x07 << 4,
+        "hend": 0x0F << 7,
+        "fd3": 1 << 11,
+        "disfdcc": 1 << 12,
+        "rndtf": 1 << 13,
+        "chm": 1 << 14,
+        "tbl": 0x03 << 15,
+        "vsense": 1 << 17,
+        "vhighfs": 1 << 18,
+        "vhighchm": 1 << 19,
+        "sync": 0x0F << 20,
+        "mres": 0x0F << 24,
+        "intpol": 1 << 28,
+        "dedge": 1 << 29,
+        "diss2g": 1 << 30,
+    },
+    "COOLCONF": {
+        "semin": 0x0F,
+        "seup": 0x03 << 5,
+        "semax": 0x0F << 8,
+        "sedn": 0x03 << 13,
+        "seimin": 1 << 15,
+        "sgt": 0x7F << 16,
+        "sfilt": 1 << 24,
+    },
+    "DRV_STATUS": {
+        "sg_result": 0x3FF,
+        "fsactive": 1 << 15,
+        "cs_actual": 0x1F << 16,
+        "stallguard": 1 << 24,
+        "ot": 1 << 25,
+        "otpw": 1 << 26,
+        "s2ga": 1 << 27,
+        "s2gb": 1 << 28,
+        "ola": 1 << 29,
+        "olb": 1 << 30,
+        "stst": 1 << 31,
+    },
+    "PWMCONF": {
+        "pwm_ampl": 0xFF,
+        "pwm_grad": 0xFF << 8,
+        "pwm_freq": 0x03 << 16,
+        "pwm_autoscale": 1 << 18,
+        "pwm_symmetric": 1 << 19,
+        "freewheel": 0x03 << 20,
+    },
+    "PWM_SCALE": {"pwm_scale": 0xFF},
+    "LOST_STEPS": {"lost_steps": 0xFFFFF},
 }
-Fields["GSTAT"] = { "reset": 1<<0, "drv_err": 1<<1, "uv_cp": 1<<2 }
-Fields["IOIN"] = {
-    "step": 1<<0, "dir": 1<<1, "dcen_cfg4": 1<<2, "dcin_cfg5": 1<<3,
-    "drv_enn_cfg6": 1<<4, "dco": 1<<5, "version": 0xff << 24
-}
-Fields["IHOLD_IRUN"] = {
-    "ihold": 0x1f << 0, "irun": 0x1f << 8, "iholddelay": 0x0f << 16
-}
-Fields["TPOWERDOWN"] = { "tpowerdown": 0xff }
-Fields["TSTEP"] = { "tstep": 0xfffff }
-Fields["TPWMTHRS"] = { "tpwmthrs": 0xfffff }
-Fields["TCOOLTHRS"] = { "tcoolthrs": 0xfffff }
-Fields["THIGH"] = { "thigh": 0xfffff }
-Fields["MSCNT"] = { "mscnt": 0x3ff }
-Fields["MSCURACT"] = { "cur_a": 0x1ff, "cur_b": 0x1ff << 16 }
-Fields["CHOPCONF"] = {
-    "toff": 0x0f, "hstrt": 0x07 << 4, "hend": 0x0f << 7, "fd3": 1<<11,
-    "disfdcc": 1<<12, "rndtf": 1<<13, "chm": 1<<14, "tbl": 0x03 << 15,
-    "vsense": 1<<17, "vhighfs": 1<<18, "vhighchm": 1<<19, "sync": 0x0f << 20,
-    "mres": 0x0f << 24, "intpol": 1<<28, "dedge": 1<<29, "diss2g": 1<<30
-}
-Fields["COOLCONF"] = {
-    "semin": 0x0f, "seup": 0x03 << 5, "semax": 0x0f << 8, "sedn": 0x03 << 13,
-    "seimin": 1<<15, "sgt": 0x7f << 16, "sfilt": 1<<24
-}
-Fields["DRV_STATUS"] = {
-    "sg_result": 0x3ff, "fsactive": 1<<15, "cs_actual": 0x1f << 16,
-    "stallguard": 1<<24, "ot": 1<<25, "otpw": 1<<26, "s2ga": 1<<27,
-    "s2gb": 1<<28, "ola": 1<<29, "olb": 1<<30, "stst": 1<<31
-}
-Fields["PWMCONF"] = {
-    "pwm_ampl": 0xff, "pwm_grad": 0xff << 8, "pwm_freq": 0x03 << 16,
-    "pwm_autoscale": 1<<18, "pwm_symmetric": 1<<19, "freewheel": 0x03 << 20
-}
-Fields["PWM_SCALE"] = { "pwm_scale": 0xff }
-Fields["LOST_STEPS"] = { "lost_steps": 0xfffff }
-
 SignedFields = ["cur_a", "cur_b", "sgt"]
 
 FieldFormatters = {
@@ -113,9 +160,7 @@ class TMCCurrentHelper:
         self.fields.set_field("irun", irun)
     def _calc_current_bits(self, current, vsense):
         sense_resistor = self.sense_resistor + 0.020
-        vref = 0.32
-        if vsense:
-            vref = 0.18
+        vref = 0.18 if vsense else 0.32
         cs = int(32. * current * sense_resistor * math.sqrt(2.) / vref
                  - 1. + .5)
         return max(0, min(31, cs))
@@ -133,9 +178,7 @@ class TMCCurrentHelper:
     def _calc_current_from_field(self, field_name):
         bits = self.fields.get_field(field_name)
         sense_resistor = self.sense_resistor + 0.020
-        vref = 0.32
-        if self.fields.get_field("vsense"):
-            vref = 0.18
+        vref = 0.18 if self.fields.get_field("vsense") else 0.32
         return (bits + 1) * vref / (32 * sense_resistor * math.sqrt(2.))
     def get_current(self):
         run_current = self._calc_current_from_field("irun")
@@ -161,9 +204,7 @@ class MCU_TMC_SPI_chain:
         self.printer = config.get_printer()
         self.chain_len = chain_len
         self.mutex = self.printer.get_reactor().mutex()
-        share = None
-        if chain_len > 1:
-            share = "tmc_spi_cs"
+        share = "tmc_spi_cs" if chain_len > 1 else None
         self.spi = bus.MCU_SPI_from_config(config, 3, default_speed=4000000,
                                            share_type=share)
         self.taken_chain_positions = []
@@ -239,12 +280,13 @@ class MCU_TMC_SPI:
     def set_register(self, reg_name, val, print_time=None):
         reg = self.name_to_reg[reg_name]
         with self.mutex:
-            for retry in range(5):
+            for _ in range(5):
                 v = self.tmc_spi.reg_write(reg, val, self.chain_pos, print_time)
                 if v == val:
                     return
         raise self.printer.command_error(
-            "Unable to write tmc spi '%s' register %s" % (self.name, reg_name))
+            f"Unable to write tmc spi '{self.name}' register {reg_name}"
+        )
 
 
 ######################################################################

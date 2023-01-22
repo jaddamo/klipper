@@ -47,7 +47,7 @@ class SerialReader:
                 completion = self.pending_notifications.pop(response.notify_id)
                 self.reactor.async_complete(completion, params)
                 continue
-            params = self.msgparser.parse(response.msg[0:count])
+            params = self.msgparser.parse(response.msg[:count])
             params['#sent_time'] = response.sent_time
             params['#receive_time'] = response.receive_time
             hdl = (params['#name'], params.get('oid'))
@@ -72,11 +72,11 @@ class SerialReader:
                                   self.warn_prefix)
                 return None
             if params['offset'] == len(identify_data):
-                msgdata = params['data']
-                if not msgdata:
+                if msgdata := params['data']:
+                    identify_data += msgdata
+                else:
                     # Done
                     return identify_data
-                identify_data += msgdata
     def _start_session(self, serial_dev, serial_fd_type=b'u', client_id=0):
         self.serial_dev = serial_dev
         self.serialqueue = self.ffi_main.gc(
@@ -261,9 +261,7 @@ class SerialReader:
                                 self.ffi_lib.serialqueue_free_commandqueue)
     # Dumping debug lists
     def dump_debug(self):
-        out = []
-        out.append("Dumping serial stats: %s" % (
-            self.stats(self.reactor.monotonic()),))
+        out = [f"Dumping serial stats: {self.stats(self.reactor.monotonic())}"]
         sdata = self.ffi_main.new('struct pull_queue_message[1024]')
         rdata = self.ffi_main.new('struct pull_queue_message[1024]')
         scount = self.ffi_lib.serialqueue_extract_old(self.serialqueue, 1,
@@ -273,13 +271,13 @@ class SerialReader:
         out.append("Dumping send queue %d messages" % (scount,))
         for i in range(scount):
             msg = sdata[i]
-            cmds = self.msgparser.dump(msg.msg[0:msg.len])
+            cmds = self.msgparser.dump(msg.msg[:msg.len])
             out.append("Sent %d %f %f %d: %s" % (
                 i, msg.receive_time, msg.sent_time, msg.len, ', '.join(cmds)))
         out.append("Dumping receive queue %d messages" % (rcount,))
         for i in range(rcount):
             msg = rdata[i]
-            cmds = self.msgparser.dump(msg.msg[0:msg.len])
+            cmds = self.msgparser.dump(msg.msg[:msg.len])
             out.append("Receive: %d %f %f %d: %s" % (
                 i, msg.receive_time, msg.sent_time, msg.len, ', '.join(cmds)))
         return '\n'.join(out)
@@ -320,7 +318,7 @@ class SerialRetryCommand:
                 return params
             if retries <= 0:
                 self.serial.register_response(None, self.name, self.oid)
-                raise error("Unable to obtain '%s' response" % (self.name,))
+                raise error(f"Unable to obtain '{self.name}' response")
             reactor = self.serial.reactor
             reactor.pause(reactor.monotonic() + retry_delay)
             retries -= 1

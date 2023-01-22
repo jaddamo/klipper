@@ -33,7 +33,7 @@ class LM75:
                                            minval=LM75_MIN_REPORT_TIME)
         self.temp = self.min_temp = self.max_temp = 0.0
         self.sample_timer = self.reactor.register_timer(self._sample_lm75)
-        self.printer.add_object("lm75 " + self.name, self)
+        self.printer.add_object(f"lm75 {self.name}", self)
         self.printer.register_event_handler("klippy:connect",
                                             self.handle_connect)
 

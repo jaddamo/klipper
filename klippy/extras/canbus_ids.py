@@ -16,8 +16,7 @@ class PrinterCANBus:
         return new_id
     def get_nodeid(self, canbus_uuid):
         if canbus_uuid not in self.ids:
-            raise self.printer.config_error("Unknown canbus_uuid %s"
-                                            % (canbus_uuid,))
+            raise self.printer.config_error(f"Unknown canbus_uuid {canbus_uuid}")
         return self.ids[canbus_uuid]
 
 def load_config(config):

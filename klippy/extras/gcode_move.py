@@ -29,8 +29,8 @@ class GCodeMove:
             'SET_GCODE_OFFSET', 'SAVE_GCODE_STATE', 'RESTORE_GCODE_STATE',
         ]
         for cmd in handlers:
-            func = getattr(self, 'cmd_' + cmd)
-            desc = getattr(self, 'cmd_' + cmd + '_help', None)
+            func = getattr(self, f'cmd_{cmd}')
+            desc = getattr(self, f'cmd_{cmd}_help', None)
             gcode.register_command(cmd, func, False, desc)
         gcode.register_command('G0', self.cmd_G1)
         gcode.register_command('M114', self.cmd_M114, True)
@@ -134,12 +134,10 @@ class GCodeMove:
             if 'F' in params:
                 gcode_speed = float(params['F'])
                 if gcode_speed <= 0.:
-                    raise gcmd.error("Invalid speed in '%s'"
-                                     % (gcmd.get_commandline(),))
+                    raise gcmd.error(f"Invalid speed in '{gcmd.get_commandline()}'")
                 self.speed = gcode_speed * self.speed_factor
         except ValueError as e:
-            raise gcmd.error("Unable to parse move '%s'"
-                             % (gcmd.get_commandline(),))
+            raise gcmd.error(f"Unable to parse move '{gcmd.get_commandline()}'")
         self.move_with_transform(self.last_position, self.speed)
     # G-Code coordinate manipulation
     def cmd_G20(self, gcmd):
@@ -192,7 +190,7 @@ class GCodeMove:
         for pos, axis in enumerate('XYZE'):
             offset = gcmd.get_float(axis, None)
             if offset is None:
-                offset = gcmd.get_float(axis + '_ADJUST', None)
+                offset = gcmd.get_float(f'{axis}_ADJUST', None)
                 if offset is None:
                     continue
                 offset += self.homing_position[pos]
@@ -223,7 +221,7 @@ class GCodeMove:
         state_name = gcmd.get('NAME', 'default')
         state = self.saved_states.get(state_name)
         if state is None:
-            raise gcmd.error("Unknown g-code state: %s" % (state_name,))
+            raise gcmd.error(f"Unknown g-code state: {state_name}")
         # Restore state
         self.absolute_coord = state['absolute_coord']
         self.absolute_extrude = state['absolute_extrude']

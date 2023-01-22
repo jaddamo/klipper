@@ -211,7 +211,7 @@ class MCU_endstop:
         ffi_main, ffi_lib = chelper.get_ffi()
         ffi_lib.trdispatch_stop(self._trdispatch)
         res = [trsync.stop() for trsync in self._trsyncs]
-        if any([r == etrsync.REASON_COMMS_TIMEOUT for r in res]):
+        if etrsync.REASON_COMMS_TIMEOUT in res:
             return -1.
         if res[0] != etrsync.REASON_ENDSTOP_HIT:
             return 0.
@@ -484,8 +484,7 @@ class RetryAsyncCommand:
             query_time = self.reactor.monotonic()
             if query_time > first_query_time + self.TIMEOUT_TIME:
                 self.serial.register_response(None, self.name, self.oid)
-                raise serialhdl.error("Timeout on wait for '%s' response"
-                                      % (self.name,))
+                raise serialhdl.error(f"Timeout on wait for '{self.name}' response")
             self.serial.raw_send(cmd, minclock, minclock, cmd_queue)
 
 # Wrapper around query commands
@@ -540,7 +539,7 @@ class MCU:
         if self._name.startswith('mcu '):
             self._name = self._name[4:]
         # Serial port
-        wp = "mcu '%s': " % (self._name)
+        wp = f"mcu '{self._name}': "
         self._serial = serialhdl.SerialReader(self._reactor, warn_prefix=wp)
         self._baud = 0
         self._canbus_iface = None
@@ -615,14 +614,13 @@ class MCU:
         logging.info("MCU '%s' %s: %s\n%s\n%s", self._name, params['#name'],
                      self._shutdown_msg, self._clocksync.dump_debug(),
                      self._serial.dump_debug())
-        prefix = "MCU '%s' shutdown: " % (self._name,)
+        prefix = f"MCU '{self._name}' shutdown: "
         if params['#name'] == 'is_shutdown':
-            prefix = "Previous MCU '%s' shutdown: " % (self._name,)
+            prefix = f"Previous MCU '{self._name}' shutdown: "
         self._printer.invoke_async_shutdown(prefix + msg + error_help(msg))
     def _handle_starting(self, params):
         if not self._is_shutdown:
-            self._printer.invoke_async_shutdown("MCU '%s' spontaneous restart"
-                                                % (self._name,))
+            self._printer.invoke_async_shutdown(f"MCU '{self._name}' spontaneous restart")
     # Connection phase
     def _check_restart(self, reason):
         start_reason = self._printer.get_start_args().get("start_reason")
@@ -632,7 +630,7 @@ class MCU:
                      self._name, reason)
         self._printer.request_exit('firmware_restart')
         self._reactor.pause(self._reactor.monotonic() + 2.000)
-        raise error("Attempt MCU '%s' restart failed" % (self._name,))
+        raise error(f"Attempt MCU '{self._name}' restart failed")
     def _connect_file(self, pace=False):
         # In a debugging mode.  Open debug output file and read data dictionary
         start_args = self._printer.get_start_args()
@@ -641,11 +639,10 @@ class MCU:
             dict_fname = start_args.get('dictionary')
         else:
             out_fname = start_args.get('debugoutput') + "-" + self._name
-            dict_fname = start_args.get('dictionary_' + self._name)
+            dict_fname = start_args.get(f'dictionary_{self._name}')
         outfile = open(out_fname, 'wb')
-        dfile = open(dict_fname, 'rb')
-        dict_data = dfile.read()
-        dfile.close()
+        with open(dict_fname, 'rb') as dfile:
+            dict_data = dfile.read()
         self._serial.connect_file(outfile, dict_data)
         self._clocksync.connect_file(self._serial, pace)
         # Handle pacing
@@ -672,7 +669,7 @@ class MCU:
         self.add_config_cmd("finalize_config crc=%d" % (config_crc,))
         if prev_crc is not None and config_crc != prev_crc:
             self._check_restart("CRC mismatch")
-            raise error("MCU '%s' CRC does not match config" % (self._name,))
+            raise error(f"MCU '{self._name}' CRC does not match config")
         # Transmit config messages (if needed)
         self.register_response(self._handle_starting, 'starting')
         try:
@@ -692,8 +689,8 @@ class MCU:
             if enum_name == 'pin':
                 # Raise pin name errors as a config error (not a protocol error)
                 raise self._printer.config_error(
-                    "Pin '%s' is not a valid pin name on mcu '%s'"
-                    % (enum_value, self._name))
+                    f"Pin '{enum_value}' is not a valid pin name on mcu '{self._name}'"
+                )
             raise
     def _send_get_config(self):
         get_config_cmd = self.lookup_query_command(
@@ -703,11 +700,9 @@ class MCU:
             return { 'is_config': 0, 'move_count': 500, 'crc': 0 }
         config_params = get_config_cmd.send()
         if self._is_shutdown:
-            raise error("MCU '%s' error during config: %s" % (
-                self._name, self._shutdown_msg))
+            raise error(f"MCU '{self._name}' error during config: {self._shutdown_msg}")
         if config_params['is_shutdown']:
-            raise error("Can not update MCU '%s' config as it is shutdown" % (
-                self._name,))
+            raise error(f"Can not update MCU '{self._name}' config as it is shutdown")
         return config_params
     def _log_info(self):
         msgparser = self._serial.get_msgparser()
@@ -716,8 +711,16 @@ class MCU:
         log_info = [
             "Loaded MCU '%s' %d commands (%s / %s)"
             % (self._name, message_count, version, build_versions),
-            "MCU '%s' config: %s" % (self._name, " ".join(
-                ["%s=%s" % (k, v) for k, v in self.get_constants().items()]))]
+            (
+                "MCU '%s' config: %s"
+                % (
+                    self._name,
+                    " ".join(
+                        [f"{k}={v}" for k, v in self.get_constants().items()]
+                    ),
+                )
+            ),
+        ]
         return "\n".join(log_info)
     def _connect(self):
         config_params = self._send_get_config()
@@ -729,18 +732,17 @@ class MCU:
             self._send_config(None)
             config_params = self._send_get_config()
             if not config_params['is_config'] and not self.is_fileoutput():
-                raise error("Unable to configure MCU '%s'" % (self._name,))
+                raise error(f"Unable to configure MCU '{self._name}'")
         else:
             start_reason = self._printer.get_start_args().get("start_reason")
             if start_reason == 'firmware_restart':
-                raise error("Failed automated reset of MCU '%s'"
-                            % (self._name,))
+                raise error(f"Failed automated reset of MCU '{self._name}'")
             # Already configured - send init commands
             self._send_config(config_params['crc'])
         # Setup steppersync with the move_count returned by get_config
         move_count = config_params['move_count']
         if move_count < self._reserved_move_slots:
-            raise error("Too few moves available on MCU '%s'" % (self._name,))
+            raise error(f"Too few moves available on MCU '{self._name}'")
         ffi_main, ffi_lib = chelper.get_ffi()
         self._steppersync = ffi_main.gc(
             ffi_lib.steppersync_alloc(self._serial.serialqueue,
@@ -806,7 +808,7 @@ class MCU:
         pcs = {'endstop': MCU_endstop,
                'digital_out': MCU_digital_out, 'pwm': MCU_pwm, 'adc': MCU_adc}
         if pin_type not in pcs:
-            raise pins.error("pin type %s not supported on mcu" % (pin_type,))
+            raise pins.error(f"pin type {pin_type} not supported on mcu")
         return pcs[pin_type](self, pin_params)
     def create_oid(self):
         self._oid_count += 1
@@ -933,10 +935,8 @@ class MCU:
         clock = self.print_time_to_clock(print_time)
         if clock < 0:
             return
-        ret = self._ffi_lib.steppersync_flush(self._steppersync, clock)
-        if ret:
-            raise error("Internal error in MCU '%s' stepcompress"
-                        % (self._name,))
+        if ret := self._ffi_lib.steppersync_flush(self._steppersync, clock):
+            raise error(f"Internal error in MCU '{self._name}' stepcompress")
     def check_active(self, print_time, eventtime):
         if self._steppersync is None:
             return
@@ -948,8 +948,7 @@ class MCU:
         self._is_timeout = True
         logging.info("Timeout with MCU '%s' (eventtime=%f)",
                      self._name, eventtime)
-        self._printer.invoke_shutdown("Lost communication with MCU '%s'" % (
-            self._name,))
+        self._printer.invoke_shutdown(f"Lost communication with MCU '{self._name}'")
     def get_status(self, eventtime=None):
         return dict(self._get_status_info)
     def stats(self, eventtime):
@@ -960,7 +959,7 @@ class MCU:
         parts = [s.split('=', 1) for s in stats.split()]
         last_stats = {k:(float(v) if '.' in v else int(v)) for k, v in parts}
         self._get_status_info['last_stats'] = last_stats
-        return False, '%s: %s' % (self._name, stats)
+        return False, f'{self._name}: {stats}'
 
 Common_MCU_errors = {
     ("Timer too close",): """
@@ -1002,4 +1001,4 @@ def add_printer_objects(config):
 def get_printer_mcu(printer, name):
     if name == 'mcu':
         return printer.lookup_object(name)
-    return printer.lookup_object('mcu ' + name)
+    return printer.lookup_object(f'mcu {name}')

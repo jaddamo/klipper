@@ -28,22 +28,10 @@ class PCA9533:
 
         self.i2c.i2c_write([PCA9533_PLS0,ls0])
     def set_led(self, gcmd):
-        if gcmd.get_float("RED",self.led0,0,1) != 0:
-            self.led0 = 1
-        else:
-            self.led0 = 0
-        if gcmd.get_float("GREEN",self.led1,0,1) != 0:
-            self.led1 = 1
-        else:
-            self.led1 = 0
-        if gcmd.get_float("BLUE",self.led2,0,1) != 0:
-            self.led2 = 1
-        else:
-            self.led2 = 0
-        if gcmd.get_float("WHITE",self.led3,0,1) != 0:
-            self.led3 = 1
-        else:
-            self.led3 = 0
+        self.led0 = 1 if gcmd.get_float("RED",self.led0,0,1) != 0 else 0
+        self.led1 = 1 if gcmd.get_float("GREEN",self.led1,0,1) != 0 else 0
+        self.led2 = 1 if gcmd.get_float("BLUE",self.led2,0,1) != 0 else 0
+        self.led3 = 1 if gcmd.get_float("WHITE",self.led3,0,1) != 0 else 0
         ls0 = (self.led3<<6) | (self.led2<<4) | (self.led1<<2) | (self.led0)
 
         self.i2c.i2c_write([PCA9533_PLS0,ls0])

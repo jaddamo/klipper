@@ -102,8 +102,7 @@ class LinearVoltage:
         try:
             li = LinearInterpolate(samples)
         except ValueError as e:
-            raise config.error("adc_temperature %s in heater %s" % (
-                str(e), config.get_name()))
+            raise config.error(f"adc_temperature {str(e)} in heater {config.get_name()}")
         self.calc_temp = li.interpolate
         self.calc_adc = li.reverse_interpolate
 
@@ -134,8 +133,7 @@ class LinearResistance:
         try:
             self.li = LinearInterpolate([(r, t) for t, r in samples])
         except ValueError as e:
-            raise config.error("adc_temperature %s in heater %s" % (
-                str(e), config.get_name()))
+            raise config.error(f"adc_temperature {str(e)} in heater {config.get_name()}")
     def calc_temp(self, adc):
         # Calculate temperature from adc
         adc = max(.00001, min(.99999, adc))

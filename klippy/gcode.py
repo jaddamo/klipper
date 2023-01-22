@@ -37,17 +37,12 @@ class GCodeCommand:
                 rawparams = rawparams[:end]
             rawparams = rawparams[start:]
         commandlen = len(command) + 1
-        if len(rawparams) > commandlen:
-            rawparams = rawparams[commandlen:]
-        else:
-            rawparams = ''
+        rawparams = rawparams[commandlen:] if len(rawparams) > commandlen else ''
         return rawparams
     def ack(self, msg=None):
         if not self._need_ack:
             return False
-        ok_msg = "ok"
-        if msg:
-            ok_msg = "ok %s" % (msg,)
+        ok_msg = f"ok {msg}" if msg else "ok"
         self.respond_raw(ok_msg)
         self._need_ack = False
         return True
@@ -58,26 +53,28 @@ class GCodeCommand:
         value = self._params.get(name)
         if value is None:
             if default is self.sentinel:
-                raise self.error("Error on '%s': missing %s"
-                                 % (self._commandline, name))
+                raise self.error(f"Error on '{self._commandline}': missing {name}")
             return default
         try:
             value = parser(value)
         except:
-            raise self.error("Error on '%s': unable to parse %s"
-                             % (self._commandline, value))
+            raise self.error(f"Error on '{self._commandline}': unable to parse {value}")
         if minval is not None and value < minval:
-            raise self.error("Error on '%s': %s must have minimum of %s"
-                             % (self._commandline, name, minval))
+            raise self.error(
+                f"Error on '{self._commandline}': {name} must have minimum of {minval}"
+            )
         if maxval is not None and value > maxval:
-            raise self.error("Error on '%s': %s must have maximum of %s"
-                             % (self._commandline, name, maxval))
+            raise self.error(
+                f"Error on '{self._commandline}': {name} must have maximum of {maxval}"
+            )
         if above is not None and value <= above:
-            raise self.error("Error on '%s': %s must be above %s"
-                             % (self._commandline, name, above))
+            raise self.error(
+                f"Error on '{self._commandline}': {name} must be above {above}"
+            )
         if below is not None and value >= below:
-            raise self.error("Error on '%s': %s must be below %s"
-                             % (self._commandline, name, below))
+            raise self.error(
+                f"Error on '{self._commandline}': {name} must be below {below}"
+            )
         return value
     def get_int(self, name, default=sentinel, minval=None, maxval=None):
         return self.get(name, default, parser=int, minval=minval, maxval=maxval)
@@ -109,8 +106,8 @@ class GCodeDispatch:
         handlers = ['M110', 'M112', 'M115',
                     'RESTART', 'FIRMWARE_RESTART', 'ECHO', 'STATUS', 'HELP']
         for cmd in handlers:
-            func = getattr(self, 'cmd_' + cmd)
-            desc = getattr(self, 'cmd_' + cmd + '_help', None)
+            func = getattr(self, f'cmd_{cmd}')
+            desc = getattr(self, f'cmd_{cmd}_help', None)
             self.register_command(cmd, func, True, desc)
     def is_traditional_gcode(self, cmd):
         # A "traditional" g-code command is a letter and followed by a number
@@ -129,8 +126,7 @@ class GCodeDispatch:
                 del self.base_gcode_handlers[cmd]
             return old_cmd
         if cmd in self.ready_gcode_handlers:
-            raise self.printer.config_error(
-                "gcode command %s already registered" % (cmd,))
+            raise self.printer.config_error(f"gcode command {cmd} already registered")
         if not self.is_traditional_gcode(cmd):
             origfunc = func
             func = lambda params: origfunc(self._get_extended_params(params))
@@ -148,12 +144,12 @@ class GCodeDispatch:
         prev_key, prev_values = prev
         if prev_key != key:
             raise self.printer.config_error(
-                "mux command %s %s %s may have only one key (%s)" % (
-                    cmd, key, value, prev_key))
+                f"mux command {cmd} {key} {value} may have only one key ({prev_key})"
+            )
         if value in prev_values:
             raise self.printer.config_error(
-                "mux command %s %s %s already registered (%s)" % (
-                    cmd, key, value, prev_values))
+                f"mux command {cmd} {key} {value} already registered ({prev_values})"
+            )
         prev_values[value] = func
     def get_command_help(self):
         return dict(self.gcode_help)
@@ -203,7 +199,7 @@ class GCodeDispatch:
                 if not need_ack:
                     raise
             except:
-                msg = 'Internal error on command:"%s"' % (cmd,)
+                msg = f'Internal error on command:"{cmd}"'
                 logging.exception(msg)
                 self.printer.invoke_shutdown(msg)
                 self._respond_error(msg)
@@ -233,11 +229,11 @@ class GCodeDispatch:
         lines = msg.strip().split('\n')
         if len(lines) > 1:
             self.respond_info("\n".join(lines), log=False)
-        self.respond_raw('!! %s' % (lines[0].strip(),))
+        self.respond_raw(f'!! {lines[0].strip()}')
         if self.is_fileinput:
             self.printer.request_exit('error_exit')
     def _respond_state(self, state):
-        self.respond_info("Klipper state: %s" % (state,), log=False)
+        self.respond_info(f"Klipper state: {state}", log=False)
     # Parameter parsing helpers
     extended_r = re.compile(
         r'^\s*(?:N[0-9]+\s*)?'
@@ -247,8 +243,7 @@ class GCodeDispatch:
     def _get_extended_params(self, gcmd):
         m = self.extended_r.match(gcmd.get_commandline())
         if m is None:
-            raise self.error("Malformed command '%s'"
-                             % (gcmd.get_commandline(),))
+            raise self.error(f"Malformed command '{gcmd.get_commandline()}'")
         eargs = m.group('args')
         try:
             eparams = [earg.split('=', 1) for earg in shlex.split(eargs)]
@@ -257,8 +252,7 @@ class GCodeDispatch:
             gcmd._params.update(eparams)
             return gcmd
         except ValueError as e:
-            raise self.error("Malformed command '%s'"
-                             % (gcmd.get_commandline(),))
+            raise self.error(f"Malformed command '{gcmd.get_commandline()}'")
     # G-Code special command handlers
     def cmd_default(self, gcmd):
         cmd = gcmd.get_command()
@@ -271,10 +265,8 @@ class GCodeDispatch:
             return
         if not self.is_printer_ready:
             raise gcmd.error(self.printer.get_state_message()[0])
-            return
         if not cmd:
-            cmdline = gcmd.get_commandline()
-            if cmdline:
+            if cmdline := gcmd.get_commandline():
                 logging.debug(cmdline)
             return
         if cmd.startswith("M117 "):
@@ -290,16 +282,12 @@ class GCodeDispatch:
                 not gcmd.get_float('S', 1.) or self.is_fileinput)):
             # Don't warn about requests to turn off fan when fan not present
             return
-        gcmd.respond_info('Unknown command:"%s"' % (cmd,))
+        gcmd.respond_info(f'Unknown command:"{cmd}"')
     def _cmd_mux(self, command, gcmd):
         key, values = self.mux_commands[command]
-        if None in values:
-            key_param = gcmd.get(key, None)
-        else:
-            key_param = gcmd.get(key)
+        key_param = gcmd.get(key, None) if None in values else gcmd.get(key)
         if key_param not in values:
-            raise gcmd.error("The value '%s' is not valid for %s"
-                             % (key_param, key))
+            raise gcmd.error(f"The value '{key_param}' is not valid for {key}")
         values[key_param](gcmd)
     # Low-level G-Code commands that are needed before the config file is loaded
     def cmd_M110(self, gcmd):
@@ -312,7 +300,7 @@ class GCodeDispatch:
         # Get Firmware Version and Capabilities
         software_version = self.printer.get_start_args().get('software_version')
         kw = {"FIRMWARE_NAME": "Klipper", "FIRMWARE_VERSION": software_version}
-        msg = " ".join(["%s:%s" % (k, v) for k, v in kw.items()])
+        msg = " ".join([f"{k}:{v}" for k, v in kw.items()])
         did_ack = gcmd.ack(msg)
         if not did_ack:
             gcmd.respond_info(msg)
@@ -348,9 +336,11 @@ class GCodeDispatch:
         if not self.is_printer_ready:
             cmdhelp.append("Printer is not ready - not all commands available.")
         cmdhelp.append("Available extended commands:")
-        for cmd in sorted(self.gcode_handlers):
-            if cmd in self.gcode_help:
-                cmdhelp.append("%-10s: %s" % (cmd, self.gcode_help[cmd]))
+        cmdhelp.extend(
+            "%-10s: %s" % (cmd, self.gcode_help[cmd])
+            for cmd in sorted(self.gcode_handlers)
+            if cmd in self.gcode_help
+        )
         gcmd.respond_info("\n".join(cmdhelp), log=False)
 
 # Support reading gcode from a pseudo-tty interface
@@ -382,10 +372,11 @@ class GCodeIO:
             self.fd_handle = self.reactor.register_fd(self.fd,
                                                       self._process_data)
     def _dump_debug(self):
-        out = []
-        out.append("Dumping gcode input %d blocks" % (len(self.input_log),))
-        for eventtime, data in self.input_log:
-            out.append("Read %f: %s" % (eventtime, repr(data)))
+        out = ["Dumping gcode input %d blocks" % (len(self.input_log),)]
+        out.extend(
+            "Read %f: %s" % (eventtime, repr(data))
+            for eventtime, data in self.input_log
+        )
         logging.info("\n".join(out))
     def _handle_shutdown(self):
         if not self.is_printer_ready:
@@ -418,18 +409,19 @@ class GCodeIO:
                 self.gcode.request_restart('exit')
             pending_commands.append("")
         # Handle case where multiple commands pending
-        if self.is_processing_data or len(pending_commands) > 1:
-            if len(pending_commands) < 20:
-                # Check for M112 out-of-order
-                for line in lines:
-                    if self.m112_r.match(line) is not None:
-                        self.gcode.cmd_M112(None)
-            if self.is_processing_data:
-                if len(pending_commands) >= 20:
-                    # Stop reading input
-                    self.reactor.unregister_fd(self.fd_handle)
-                    self.fd_handle = None
-                return
+        if (self.is_processing_data or len(pending_commands) > 1) and len(
+            pending_commands
+        ) < 20:
+            # Check for M112 out-of-order
+            for line in lines:
+                if self.m112_r.match(line) is not None:
+                    self.gcode.cmd_M112(None)
+        if self.is_processing_data:
+            if len(pending_commands) >= 20:
+                # Stop reading input
+                self.reactor.unregister_fd(self.fd_handle)
+                self.fd_handle = None
+            return
         # Process commands
         self.is_processing_data = True
         while pending_commands:

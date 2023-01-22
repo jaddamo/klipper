@@ -23,8 +23,7 @@ class ZAdjustHelper:
                 "%s z_positions needs exactly %d items" % (
                     self.name, len(z_steppers)))
         if len(z_steppers) < 2:
-            raise self.printer.config_error(
-                "%s requires multiple z steppers" % (self.name,))
+            raise self.printer.config_error(f"{self.name} requires multiple z steppers")
         self.z_steppers = z_steppers
     def adjust_steppers(self, adjustments, speed):
         toolhead = self.printer.lookup_object('toolhead')
@@ -115,8 +114,9 @@ class RetryHelper:
                 self.current_retry, self.max_retries, self.value_label,
                 error, self.retry_tolerance))
         if self.check_increase(error):
-            raise self.gcode.error("Retries aborting: %s is increasing. %s"
-                                   % (self.value_label, self.error_msg_extra))
+            raise self.gcode.error(
+                f"Retries aborting: {self.value_label} is increasing. {self.error_msg_extra}"
+            )
         if error <= self.retry_tolerance:
             return "done"
         self.current_retry += 1

@@ -135,36 +135,32 @@ class HallFilamentWidthSensor:
                     # Get first item in filament_array queue
                     item = self.filament_array.pop(0)
                     self.filament_width = item[1]
-                else:
-                    if ((self.use_current_dia_while_delay)
+                elif ((self.use_current_dia_while_delay)
                         and (self.firstExtruderUpdatePosition
                              == pending_position)):
-                        self.filament_width = self.diameter
-                    elif  self.firstExtruderUpdatePosition == pending_position:
-                        self.filament_width = self.nominal_filament_dia
+                    self.filament_width = self.diameter
+                elif  self.firstExtruderUpdatePosition == pending_position:
+                    self.filament_width = self.nominal_filament_dia
                 if ((self.filament_width <= self.max_diameter)
                     and (self.filament_width >= self.min_diameter)):
                     percentage = round(self.nominal_filament_dia**2
                                        / self.filament_width**2 * 100)
-                    self.gcode.run_script("M221 S" + str(percentage))
+                    self.gcode.run_script(f"M221 S{str(percentage)}")
                 else:
                     self.gcode.run_script("M221 S100")
         else:
             self.gcode.run_script("M221 S100")
             self.filament_array = []
 
-        if self.is_active:
-            return eventtime + 1
-        else:
-            return self.reactor.NEVER
+        return eventtime + 1 if self.is_active else self.reactor.NEVER
 
     def cmd_M407(self, gcmd):
         response = ""
-        if self.diameter > 0:
-            response += ("Filament dia (measured mm): "
-                         + str(self.diameter))
-        else:
-            response += "Filament NOT present"
+        response += (
+            f"Filament dia (measured mm): {str(self.diameter)}"
+            if self.diameter > 0
+            else "Filament NOT present"
+        )
         gcmd.respond_info(response)
 
     def cmd_ClearFilamentArray(self, gcmd):
@@ -201,8 +197,8 @@ class HallFilamentWidthSensor:
 
     def cmd_Get_Raw_Values(self, gcmd):
         response = "ADC1="
-        response +=  (" "+str(self.lastFilamentWidthReading))
-        response +=  (" ADC2="+str(self.lastFilamentWidthReading2))
+        response += f" {str(self.lastFilamentWidthReading)}"
+        response += f" ADC2={str(self.lastFilamentWidthReading2)}"
         response +=  (" RAW="+
                       str(self.lastFilamentWidthReading
                       +self.lastFilamentWidthReading2))

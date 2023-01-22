@@ -38,7 +38,7 @@ class ClockSync:
         self.clock_est = (self.time_avg, self.clock_avg, self.mcu_freq)
         self.prediction_variance = (.001 * self.mcu_freq)**2
         # Enable periodic get_clock timer
-        for i in range(8):
+        for _ in range(8):
             self.reactor.pause(self.reactor.monotonic() + 0.050)
             self.last_prediction_time = -9999.
             params = serial.send_with_response('get_clock', 'clock')
@@ -51,9 +51,7 @@ class ClockSync:
         self.serial = serial
         self.mcu_freq = serial.msgparser.get_constant_float('CLOCK_FREQ')
         self.clock_est = (0., 0., self.mcu_freq)
-        freq = 1000000000000.
-        if pace:
-            freq = self.mcu_freq
+        freq = self.mcu_freq if pace else 1000000000000.
         serial.set_clock_est(freq, self.reactor.monotonic(), 0, 0)
     # MCU clock querying (_handle_clock is invoked from background thread)
     def _get_clock_event(self, eventtime):

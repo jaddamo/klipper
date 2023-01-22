@@ -125,7 +125,7 @@ def estimate_shaper(shaper, freq, damping_ratio):
 def shift_pulses(shaper):
     A, T, name = shaper
     n = len(T)
-    ts = sum([A[i] * T[i] for i in range(n)]) / sum(A)
+    ts = sum(A[i] * T[i] for i in range(n)) / sum(A)
     for i in range(n):
         T[i] -= ts
 
@@ -164,9 +164,10 @@ def gen_shaper_response(shaper):
     freqs = []
     freq, freq_end = find_shaper_plot_range(shaper, vib_tol=0.25)
     while freq <= freq_end:
-        vals = []
-        for damping_ratio in DAMPING_RATIOS:
-            vals.append(estimate_shaper(shaper, freq, damping_ratio))
+        vals = [
+            estimate_shaper(shaper, freq, damping_ratio)
+            for damping_ratio in DAMPING_RATIOS
+        ]
         response.append(vals)
         freqs.append(freq)
         freq += PLOT_FREQ_STEP

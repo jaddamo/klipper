@@ -67,8 +67,7 @@ class QuadGantryLevel:
         ppx1 = [positions[1][0] + offsets[0], z_positions[1]]
         ppx2 = [positions[2][0] + offsets[0], z_positions[2]]
         slope_x_pp12 = self.linefit(ppx1, ppx2)
-        logging.info("quad_gantry_level f1: %s, f2: %s"
-                     % (slope_x_pp03, slope_x_pp12))
+        logging.info(f"quad_gantry_level f1: {slope_x_pp03}, f2: {slope_x_pp12}")
         # Calculate gantry slope along Y axis between stepper 0 and 1
         a1 = [positions[0][1] + offsets[1],
               self.plot(slope_x_pp03, self.gantry_corners[0][0])]
@@ -81,8 +80,7 @@ class QuadGantryLevel:
         b2 = [positions[1][1] + offsets[1],
               self.plot(slope_x_pp12, self.gantry_corners[1][0])]
         slope_y_s23 = self.linefit(b1, b2)
-        logging.info("quad_gantry_level af: %s, bf: %s"
-                     % (slope_y_s01, slope_y_s23))
+        logging.info(f"quad_gantry_level af: {slope_y_s01}, bf: {slope_y_s23}")
         # Calculate z height of each stepper
         z_height = [0,0,0,0]
         z_height[0] = self.plot(slope_y_s01, self.gantry_corners[0][1])
@@ -90,16 +88,13 @@ class QuadGantryLevel:
         z_height[2] = self.plot(slope_y_s23, self.gantry_corners[1][1])
         z_height[3] = self.plot(slope_y_s23, self.gantry_corners[0][1])
 
-        ainfo = zip(["z","z1","z2","z3"], z_height[0:4])
+        ainfo = zip(["z","z1","z2","z3"], z_height[:4])
         apos = " ".join(["%s: %06f" % (x) for x in ainfo])
         self.gcode.respond_info("Actuator Positions:\n" + apos)
 
         z_ave = sum(z_height) / len(z_height)
         self.gcode.respond_info("Average: %0.6f" % z_ave)
-        z_adjust = []
-        for z in z_height:
-            z_adjust.append(z_ave - z)
-
+        z_adjust = [z_ave - z for z in z_height]
         adjust_max = max(z_adjust)
         if adjust_max > self.max_adjust:
             raise self.gcode.error("Aborting quad_gantry_level"

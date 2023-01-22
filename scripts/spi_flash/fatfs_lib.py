@@ -68,10 +68,9 @@ def check_fatfs_build(printfunc=lambda o: o):
     destlib = os.path.join(srcdir, DEST_LIB)
     if chelper.check_build_code(srcfiles+ofiles+[__file__], destlib):
         if chelper.check_gcc_option(chelper.SSE_FLAGS):
-            cmd = "%s %s %s" % (chelper.GCC_CMD, chelper.SSE_FLAGS,
-                                chelper.COMPILE_ARGS)
+            cmd = f"{chelper.GCC_CMD} {chelper.SSE_FLAGS} {chelper.COMPILE_ARGS}"
         else:
-            cmd = "%s %s" % (chelper.GCC_CMD, chelper.COMPILE_ARGS)
+            cmd = f"{chelper.GCC_CMD} {chelper.COMPILE_ARGS}"
         printfunc("Building FatFS shared library...")
         chelper.do_build_code(cmd % (destlib, ' '.join(srcfiles)))
         printfunc("Done\n")

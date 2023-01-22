@@ -30,22 +30,18 @@ class GCodeButton:
 
     cmd_QUERY_BUTTON_help = "Report on the state of a button"
     def cmd_QUERY_BUTTON(self, gcmd):
-        gcmd.respond_info(self.name + ": " + self.get_status()['state'])
+        gcmd.respond_info(f"{self.name}: " + self.get_status()['state'])
 
     def button_callback(self, eventtime, state):
         self.last_state = state
-        template = self.press_template
-        if not state:
-            template = self.release_template
+        template = self.press_template if state else self.release_template
         try:
             self.gcode.run_script(template.render())
         except:
             logging.exception("Script running error")
 
     def get_status(self, eventtime=None):
-        if self.last_state:
-            return {'state': "PRESSED"}
-        return {'state': "RELEASED"}
+        return {'state': "PRESSED"} if self.last_state else {'state': "RELEASED"}
 
 def load_config_prefix(config):
     return GCodeButton(config)

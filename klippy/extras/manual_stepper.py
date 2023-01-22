@@ -92,8 +92,7 @@ class ManualStepper:
             self.do_set_position(setpos)
         speed = gcmd.get_float('SPEED', self.velocity, above=0.)
         accel = gcmd.get_float('ACCEL', self.accel, minval=0.)
-        homing_move = gcmd.get_int('STOP_ON_ENDSTOP', 0)
-        if homing_move:
+        if homing_move := gcmd.get_int('STOP_ON_ENDSTOP', 0):
             movepos = gcmd.get_float('MOVE')
             self.do_homing_move(movepos, speed, accel,
                                 homing_move > 0, abs(homing_move) == 1)

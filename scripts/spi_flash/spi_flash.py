@@ -33,7 +33,7 @@ def output_line(msg):
     sys.stdout.flush()
 
 def output(msg):
-    sys.stdout.write("%s" % (msg,))
+    sys.stdout.write(f"{msg}")
     sys.stdout.flush()
 
 def calc_crc7(data):
@@ -43,7 +43,7 @@ def calc_crc7(data):
     crc = 0
     for b in data:
         crc ^= b & 0xFF
-        for i in range(8):
+        for _ in range(8):
             crc = (crc << 1) ^ poly if crc & 0x80 else crc << 1
     # The sdcard protocol likes the crc left justfied with a
     # padded bit
@@ -54,7 +54,7 @@ def calc_crc16(data):
     crc = 0
     for b in data:
         crc ^= (b & 0xFF) << 8
-        for i in range(8):
+        for _ in range(8):
             crc = (crc << 1) ^ poly if crc & 0x8000 else crc << 1
     return crc & 0xFFFF
 
@@ -65,7 +65,7 @@ def translate_serial_to_tty(device):
     ttyname = os.path.realpath(device)
     if os.path.exists('/dev/serial/by-path/'):
         for fname in os.listdir('/dev/serial/by-path/'):
-            fname = '/dev/serial/by-path/' + fname
+            fname = f'/dev/serial/by-path/{fname}'
             if os.path.realpath(fname) == ttyname:
                 return ttyname, fname
     return ttyname, ttyname
@@ -79,8 +79,7 @@ def check_need_convert(board_name, config):
         robin_bin = os.path.join(
             os.path.dirname(klipper_bin),
             os.path.basename(config['firmware_path']))
-        cmd = "%s %s %s %s" % (sys.executable, robin_util, klipper_bin,
-                               robin_bin)
+        cmd = f"{sys.executable} {robin_util} {klipper_bin} {robin_bin}"
         output("Converting Klipper binary to MKS Robin format...")
         os.system(cmd)
         output_line("Done")
@@ -198,7 +197,7 @@ class FatFS:
     def _fatfs_cb_disk_read(self, readbuf, sector, count):
         start = 0
         end = SECTOR_SIZE
-        for sec in range(sector, sector + count, 1):
+        for sec in range(sector, sector + count):
             tries = 3
             buf = None
             while True:
@@ -221,7 +220,7 @@ class FatFS:
     def _fatfs_cb_disk_write(self, writebuf, sector, count):
         start = 0
         end = SECTOR_SIZE
-        for sec in range(sector, sector + count, 1):
+        for sec in range(sector, sector + count):
             tries = 3
             while True:
                 try:
@@ -244,8 +243,7 @@ class FatFS:
         ioctl_cmds = [
             'CTRL_SYNC', 'GET_SECTOR_COUNT', 'GET_SECTOR_SIZE',
             'GET_BLOCK_SIZE', 'CTRL_TRIM']
-        logging.debug("flash_sdcard: Received IOCTL command %s"
-                      % (ioctl_cmds[cmd]))
+        logging.debug(f"flash_sdcard: Received IOCTL command {ioctl_cmds[cmd]}")
         return 0
 
     def _fatfs_cb_get_fattime(self):
@@ -257,14 +255,14 @@ class FatFS:
 
     def mount(self, print_func=logging.info):
         ret = self.ffi_lib.fatfs_mount()
-        if ret == 0:
-            self.sdcard.print_card_info(print_func)
-            dinfo = self.get_disk_info()
-            for key, val in sorted(dinfo.items(), key=lambda x: x[0]):
-                print_func("%s: %s" % (key, val))
-        else:
-            raise OSError("flash_sdcard: failed to mount SD Card, returned %s"
-                          % (FRESULT[ret]))
+        if ret != 0:
+            raise OSError(
+                f"flash_sdcard: failed to mount SD Card, returned {FRESULT[ret]}"
+            )
+        self.sdcard.print_card_info(print_func)
+        dinfo = self.get_disk_info()
+        for key, val in sorted(dinfo.items(), key=lambda x: x[0]):
+            print_func(f"{key}: {val}")
 
     def unmount(self):
         self.ffi_lib.fatfs_unmount()
@@ -329,8 +327,7 @@ class FatFS:
         disk_info = self.ffi_main.new("struct ff_disk_info *")
         ret = self.ffi_lib.fatfs_get_disk_info(disk_info)
         if ret != 0:
-            logging.info("flash_sdcard: Failed to retreive disk info: %s"
-                         % (FRESULT[ret],))
+            logging.info(f"flash_sdcard: Failed to retreive disk info: {FRESULT[ret]}")
             return {}
         return {
             'volume_label': self.ffi_main.string(disk_info.label, 12),
@@ -365,12 +362,11 @@ class SDCardFile:
         self.eof = False
         if self.fhdl == self.ffi_main.NULL:
             self.fhdl = None
-            raise OSError("flash_sdcard: Could not open file '%s':"
-                          % (self.path))
+            raise OSError(f"flash_sdcard: Could not open file '{self.path}':")
 
     def read(self, length=None):
         if self.fhdl is None:
-            raise OSError("flash_sdcard: File '%s' not open" % (self.path))
+            raise OSError(f"flash_sdcard: File '{self.path}' not open")
         if self.eof:
             return b""
         ret_buf = b""
@@ -384,24 +380,23 @@ class SDCardFile:
         while True:
             bytes_read = self.ffi_lib.fatfs_read(self.fhdl, cdata_buf, length)
             if bytes_read < 0:
-                raise OSError("flash_sdcard: Error Reading file '%s'"
-                              % (self.path))
+                raise OSError(f"flash_sdcard: Error Reading file '{self.path}'")
             self.eof = (bytes_read < length)
-            ret_buf += byte_buf[0:bytes_read]
+            ret_buf += byte_buf[:bytes_read]
             if self.eof or not full_read:
                 break
         return ret_buf
 
     def write(self, buf):
         if self.fhdl is None:
-            raise OSError("flash_sdcard: File '%s' not open" % (self.path))
+            raise OSError(f"flash_sdcard: File '{self.path}' not open")
         if not buf:
             return 0
         cbuf = self.ffi_main.from_buffer(buf)
         bytes_written = self.ffi_lib.fatfs_write(self.fhdl, cbuf, len(cbuf))
         if bytes_written < 0:
             # Disk Full or some other error
-            raise OSError("flash_sdcard: Error writing file '%s'" % (self.path))
+            raise OSError(f"flash_sdcard: Error writing file '{self.path}'")
         return bytes_written
 
     def close(self):
@@ -470,54 +465,43 @@ class SDCardSPI:
                 # CMD8 is illegal, this is a version 1.0 card
                 self.sd_version = 1
             elif len(resp) == 5:
-                if resp[0] == 1:
-                    self.sd_version = 2
-                    if not (resp[-2] == 1 and resp[-1] == check_pattern):
-                        raise OSError("flash_sdcard: SD Card not running in a "
-                                      "compatible voltage range")
-                else:
+                if resp[0] != 1:
                     raise OSError("flash_sdcard: CMD8 Error 0x%X" % (resp[0],))
+                self.sd_version = 2
+                if resp[-2] != 1 or resp[-1] != check_pattern:
+                    raise OSError("flash_sdcard: SD Card not running in a "
+                                  "compatible voltage range")
             else:
-                raise OSError("flash_sdcard: Invalid CMD8 response: %s"
-                              % (repr(resp)))
-            if self.enable_crc:
-                # Enable SD crc checks (CMD59)
-                if not self._check_command(1, 'CRC_ON_OFF', 1):
-                    logging.info("flash_sdcard: failed to enable CRC checks")
-            if self.sd_version == 2:
-                # Init card and come out of idle (ACMD41)
-                # Version 2 Cards may init before checking the OCR
-                if not self._check_command(0, 'SD_SEND_OP_COND', 1 << 30,
-                                           is_app_cmd=True):
-                    raise OSError("flash_sdcard: SD Card did not come"
-                                  " out of IDLE after reset")
+                raise OSError(f"flash_sdcard: Invalid CMD8 response: {repr(resp)}")
+            if self.enable_crc and not self._check_command(1, 'CRC_ON_OFF', 1):
+                logging.info("flash_sdcard: failed to enable CRC checks")
+            if self.sd_version == 2 and not self._check_command(
+                0, 'SD_SEND_OP_COND', 1 << 30, is_app_cmd=True
+            ):
+                raise OSError("flash_sdcard: SD Card did not come"
+                              " out of IDLE after reset")
             # Read OCR Register (CMD58)
             resp = self._send_command_with_response('READ_OCR', 0)
             resp = resp.strip(b'\xFF')
-            # If 'READ_OCR' is illegal then this is likely MMC.
-            # At this time MMC is not supported
-            if len(resp) == 5:
-                if self.sd_version == 1 and resp[0] == 1:
-                    # Check acceptable volatage range for V1 cards
-                    if resp[2] != 0xFF:
-                        raise OSError("flash_sdcard: card does not support"
-                                      " 3.3v range")
-                elif self.sd_version == 2 and resp[0] == 0:
-                    # Determine if this is a high capacity sdcard
-                    if resp[1] & 0x40:
-                        self.high_capacity = True
-                else:
-                    raise OSError("flash_sdcard: READ_OCR Error 0x%X"
-                                  % (resp[0],))
-            else:
+            if len(resp) != 5:
                 raise OSError("flash_sdcard: Invalid OCR Response")
-            if self.sd_version == 1:
-                # Init card and come out of idle (ACMD41)
-                # Version 1 Cards do this after checking the OCR
-                if not self._check_command(0, 'SD_SEND_OP_COND', 0,
-                                           is_app_cmd=True):
-                    raise OSError("flash_sdcard: SD Card did not come"
-                                  " out of IDLE after reset")
+            if self.sd_version == 1 and resp[0] == 1:
+                # Check acceptable volatage range for V1 cards
+                if resp[2] != 0xFF:
+                    raise OSError("flash_sdcard: card does not support"
+                                  " 3.3v range")
+            elif self.sd_version == 2 and resp[0] == 0:
+                # Determine if this is a high capacity sdcard
+                if resp[1] & 0x40:
+                    self.high_capacity = True
+            else:
+                raise OSError("flash_sdcard: READ_OCR Error 0x%X"
+                              % (resp[0],))
+            if self.sd_version == 1 and not self._check_command(
+                0, 'SD_SEND_OP_COND', 0, is_app_cmd=True
+            ):
+                raise OSError("flash_sdcard: SD Card did not come"
+                              " out of IDLE after reset")
 
             # Set block size to 512 (CMD16)
             if self._check_command(0, 'SET_BLOCKLEN', SECTOR_SIZE, tries=5):
@@ -565,8 +549,7 @@ class SDCardSPI:
         command = SD_COMMANDS[cmd] | 0x40
         request = [command]
         if isinstance(args, int):
-            for i in range(3, -1, -1):
-                request.append((args >> (8*i)) & 0xFF)
+            request.extend((args >> (8*i)) & 0xFF for i in range(3, -1, -1))
         elif isinstance(args, list) and len(args) == 4:
             request += args
         else:
@@ -617,8 +600,7 @@ class SDCardSPI:
         cid['oem_id'] = reg[1:3].decode(encoding='ascii', errors='ignore')
         cid['product_name'] = reg[3:8].decode(
             encoding='ascii', errors='ignore')
-        cid['product_revision'] = str(reg[8] >> 4 & 0xFF) + "." \
-            + str(reg[8] & 0xFF)
+        cid['product_revision'] = f"{str(reg[8] >> 4 & 255)}.{str(reg[8] & 255)}"
         cid['serial_number'] = "".join(["%02X" % (c,) for c in reg[9:13]])
         mfg_year = (((reg[13] & 0xF) << 4) | ((reg[14] >> 4) & 0xF)) + 2000
         mfg_month = reg[14] & 0xF
@@ -663,11 +645,11 @@ class SDCardSPI:
     def print_card_info(self, print_func=logging.info):
         print_func("\nSD Card Information:")
         print_func("Version: %.1f" % (self.sd_version))
-        print_func("SDHC/SDXC: %s" % (self.high_capacity))
-        print_func("Write Protected: %s" % (self.write_protected))
+        print_func(f"SDHC/SDXC: {self.high_capacity}")
+        print_func(f"Write Protected: {self.write_protected}")
         print_func("Sectors: %d" % (self.total_sectors,))
         for name, val in self.card_info.items():
-            print_func("%s: %s" % (name, val))
+            print_func(f"{name}: {val}")
 
     def read_sector(self, sector):
         buf = None
@@ -817,8 +799,8 @@ class MCUConnection:
         build_mcu_type = self.board_config['mcu']
         if mcu_type != build_mcu_type:
             raise SPIFlashError(
-                "MCU Type mismatch: Build MCU = %s, Connected MCU = %s"
-                % (build_mcu_type, mcu_type))
+                f"MCU Type mismatch: Build MCU = {build_mcu_type}, Connected MCU = {mcu_type}"
+            )
         self.enumerations = msgparser.get_enumerations()
         self.raw_dictionary = msgparser.get_raw_data_dictionary()
 
@@ -889,7 +871,7 @@ class MCUConnection:
         if bus == "swspi":
             cfgpins = self.board_config['spi_pins']
             pins = [p.strip().upper() for p in cfgpins.split(',') if p.strip()]
-            pin_err_msg = "Invalid Software SPI Pins: %s" % (cfgpins,)
+            pin_err_msg = f"Invalid Software SPI Pins: {cfgpins}"
             if len(pins) != 3:
                 raise SPIFlashError(pin_err_msg)
             for p in pins:
@@ -897,12 +879,12 @@ class MCUConnection:
                     raise SPIFlashError(pin_err_msg)
             bus_cmd = SW_SPI_BUS_CMD % (SPI_OID, pins[0], pins[1], pins[2],
                                         SPI_MODE, SD_SPI_SPEED)
-        else:
-            if bus not in bus_enums:
-                raise SPIFlashError("Invalid SPI Bus: %s" % (bus,))
+        elif bus in bus_enums:
             bus_cmd = SPI_BUS_CMD % (SPI_OID, bus, SPI_MODE, SD_SPI_SPEED)
+        else:
+            raise SPIFlashError(f"Invalid SPI Bus: {bus}")
         if cs_pin not in pin_enums:
-            raise SPIFlashError("Invalid CS Pin: %s" % (cs_pin,))
+            raise SPIFlashError(f"Invalid CS Pin: {cs_pin}")
         cfg_cmds = [
             ALLOC_OIDS_CMD % (1),
             SPI_CFG_CMD % (SPI_OID, cs_pin),
@@ -946,19 +928,20 @@ class MCUConnection:
             finfo = self.fatfs.get_file_info(fw_path)
             with self.fatfs.open_file(fw_path, 'r') as sd_f:
                 while True:
-                    buf = sd_f.read(4096)
-                    if not buf:
+                    if buf := sd_f.read(4096):
+                        sd_sha.update(buf)
+                    else:
                         break
-                    sd_sha.update(buf)
         except Exception:
             logging.exception("SD Card Download Error")
-            raise SPIFlashError("Error reading %s from SD" % (fw_path))
+            raise SPIFlashError(f"Error reading {fw_path} from SD")
         sd_size = finfo.get('size', -1)
         input_chksm = input_sha.hexdigest().upper()
         sd_chksm = sd_sha.hexdigest().upper()
         if input_chksm != sd_chksm:
-            raise SPIFlashError("Checksum Mismatch: Got '%s', expected '%s'"
-                                % (sd_chksm, input_chksm))
+            raise SPIFlashError(
+                f"Checksum Mismatch: Got '{sd_chksm}', expected '{input_chksm}'"
+            )
         output_line("Done")
         output_line(
             "Firmware Upload Complete: %s, Size: %d, Checksum (SHA1): %s"
@@ -967,19 +950,17 @@ class MCUConnection:
 
     def verify_flash(self, req_chksm, old_dictionary, req_dictionary):
         output("Verifying Flash...")
-        validation_passed = False
         msgparser = self._serial.get_msgparser()
         cur_dictionary = msgparser.get_raw_data_dictionary()
+        validation_passed = False
         # If we have a dictionary, check that it matches.
         if req_dictionary:
             if cur_dictionary != req_dictionary:
-                raise SPIFlashError("Version Mismatch: Got '%s...', "
-                                    "expected '%s...'"
-                                    % (msgparser.get_version_info()[0],
-                                       json.loads(req_dictionary)['version']))
+                raise SPIFlashError(
+                    f"Version Mismatch: Got '{msgparser.get_version_info()[0]}...', expected '{json.loads(req_dictionary)['version']}...'"
+                )
             output("Version matched...")
             validation_passed = True
-        # Otherwise check that the MCU dictionary changed
         elif cur_dictionary != old_dictionary:
             output("Version updated...")
             validation_passed = True
@@ -994,23 +975,22 @@ class MCUConnection:
                 with self.fatfs.open_file(cur_fw_path, 'r') as sd_f:
                     cur_fw_sha = hashlib.sha1()
                     while True:
-                        buf = sd_f.read(4096)
-                        if not buf:
+                        if buf := sd_f.read(4096):
+                            cur_fw_sha.update(buf)
+                        else:
                             break
-                        cur_fw_sha.update(buf)
             except Exception:
-                msg = "Failed to read file %s" % (cur_fw_path,)
+                msg = f"Failed to read file {cur_fw_path}"
                 logging.debug(msg)
                 output("Checksum skipped...")
             if cur_fw_sha is not None:
                 cur_fw_chksm = cur_fw_sha.hexdigest().upper()
-                if req_chksm == cur_fw_chksm:
-                    validation_passed = True
-                    output("Checksum matched...")
-                else:
-                    raise SPIFlashError("Checksum Mismatch: Got '%s', "
-                                        "expected '%s'"
-                                        % (cur_fw_chksm, req_chksm))
+                if req_chksm != cur_fw_chksm:
+                    raise SPIFlashError(
+                        f"Checksum Mismatch: Got '{cur_fw_chksm}', expected '{req_chksm}'"
+                    )
+                validation_passed = True
+                output("Checksum matched...")
         if not validation_passed:
             raise SPIFlashError("Validation failure.")
         output_line("Done")
@@ -1019,20 +999,21 @@ class MCUConnection:
             try:
                 fw_path = self.board_config.get('firmware_path', "firmware.bin")
                 self.fatfs.remove_item(fw_path)
-                output_line("Found and deleted %s after reset" % (fw_path,))
+                output_line(f"Found and deleted {fw_path} after reset")
             except Exception:
                 pass
         output_line("Firmware Flash Successful")
-        output_line("Current Firmware: %s" % (msgparser.get_version_info()[0],))
+        output_line(f"Current Firmware: {msgparser.get_version_info()[0]}")
 
 class SPIFlash:
     def __init__(self, args):
         self.board_config = args
         if not os.path.exists(args['device']):
-            raise SPIFlashError("No device found at '%s'" % (args['device'],))
+            raise SPIFlashError(f"No device found at '{args['device']}'")
         if not os.path.isfile(args['klipper_bin_path']):
-            raise SPIFlashError("Unable to locate klipper binary at '%s'"
-                                % (args['klipper_bin_path'],))
+            raise SPIFlashError(
+                f"Unable to locate klipper binary at '{args['klipper_bin_path']}'"
+            )
         tty_name, dev_by_path = translate_serial_to_tty(args['device'])
         self.device_path = dev_by_path
         self.baud_rate = args['baud']
@@ -1047,8 +1028,9 @@ class SPIFlash:
                 with open(args['klipper_dict_path'], 'rb') as dict_f:
                     self.new_dictionary = dict_f.read(32*1024)
             except Exception:
-                raise SPIFlashError("Missing or invalid dictionary at '%s'"
-                                    % (args['klipper_dict_path'],))
+                raise SPIFlashError(
+                    f"Missing or invalid dictionary at '{args['klipper_dict_path']}'"
+                )
 
     def _wait_for_reconnect(self):
         output("Waiting for device to reconnect...")
@@ -1159,7 +1141,7 @@ def main():
     logging.basicConfig(level=log_level)
     flash_args = board_defs.lookup_board(args.board)
     if flash_args is None:
-        output_line("Unable to find defintion for board: %s" % (args.board,))
+        output_line(f"Unable to find defintion for board: {args.board}")
         sys.exit(-1)
     flash_args['device'] = args.device
     flash_args['baud'] = args.baud

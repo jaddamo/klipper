@@ -31,7 +31,7 @@ def plot_motion(amanager, graphs, log_prefix):
     fig, rows = matplotlib.pyplot.subplots(nrows=len(graphs), sharex=True)
     if len(graphs) == 1:
         rows = [rows]
-    rows[0].set_title("Motion Analysis (%s)" % (log_prefix,))
+    rows[0].set_title(f"Motion Analysis ({log_prefix})")
     for graph, graph_ax in zip(graphs, rows):
         graph_units = graph_twin_units = twin_ax = None
         for dataset, plot_params in graph:
@@ -51,7 +51,7 @@ def plot_motion(amanager, graphs, log_prefix):
                     graph_units = "Unknown"
                     ax.set_ylabel(graph_units)
             pparams = {'label': label['label'], 'alpha': 0.8}
-            pparams.update(plot_params)
+            pparams |= plot_params
             ax.plot(times, datasets[dataset], **pparams)
         if twin_ax is not None:
             li1, la1 = graph_ax.get_legend_handles_labels()
@@ -79,7 +79,7 @@ def parse_graph_description(desc):
     if '?' not in desc:
         return (desc, {})
     dataset, params = desc.split('?', 1)
-    params = {k: v for k, v in urlparse.parse_qsl(params)}
+    params = dict(urlparse.parse_qsl(params))
     for fkey in ['alpha']:
         if fkey in params:
             params[fkey] = float(params[fkey])
@@ -88,8 +88,7 @@ def parse_graph_description(desc):
 def list_datasets():
     datasets = readlog.list_datasets() + analyzers.list_datasets()
     out = ["\nAvailable datasets:\n"]
-    for dataset, desc in datasets:
-        out.append("%-24s: %s\n" % (dataset, desc))
+    out.extend("%-24s: %s\n" % (dataset, desc) for dataset, desc in datasets)
     out.append("\n")
     sys.stdout.write("".join(out))
     sys.exit(0)
