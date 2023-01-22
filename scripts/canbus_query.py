@@ -33,7 +33,7 @@ def query_unassigned(canbus_iface):
         if (msg is None or msg.arbitration_id != CANBUS_ID_ADMIN + 1
             or msg.dlc < 7 or msg.data[0] != RESP_NEED_NODEID):
             continue
-        uuid = sum([v << ((5-i)*8) for i, v in enumerate(msg.data[1:7])])
+        uuid = sum(v << ((5-i)*8) for i, v in enumerate(msg.data[1:7]))
         if uuid in found_ids:
             continue
         found_ids[uuid] = 1

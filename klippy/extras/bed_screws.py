@@ -20,9 +20,9 @@ class BedScrews:
                 break
             screw_coord = config.getfloatlist(prefix, count=2)
             screw_name = "screw at %.3f,%.3f" % screw_coord
-            screw_name = config.get(prefix + "_name", screw_name)
+            screw_name = config.get(f"{prefix}_name", screw_name)
             screws.append((screw_coord, screw_name))
-            pfa = prefix + "_fine_adjust"
+            pfa = f"{prefix}_fine_adjust"
             if config.get(pfa, None) is not None:
                 fine_coord = config.getfloatlist(pfa, count=2)
                 fine_adjust.append((fine_coord, screw_name))

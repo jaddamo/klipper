@@ -51,7 +51,7 @@ class FieldHelper:
         return new_value
     def set_config_field(self, config, field_name, default):
         # Allow a field to be set from the config file
-        config_name = "driver_" + field_name.upper()
+        config_name = f"driver_{field_name.upper()}"
         reg_name = self.field_to_register[field_name]
         mask = self.all_fields[reg_name][field_name]
         maxval = mask >> ffs(mask)
@@ -72,8 +72,8 @@ class FieldHelper:
             field_value = self.get_field(field_name, reg_value, reg_name)
             sval = self.field_formatters.get(field_name, str)(field_value)
             if sval and sval != "0":
-                fields.append(" %s=%s" % (field_name, sval))
-        return "%-11s %08x%s" % (reg_name + ":", reg_value, "".join(fields))
+                fields.append(f" {field_name}={sval}")
+        return "%-11s %08x%s" % (f"{reg_name}:", reg_value, "".join(fields))
     def get_reg_fields(self, reg_name, reg_value):
         # Provide fields found in a register
         reg_fields = self.all_fields.get(reg_name, {})
@@ -154,8 +154,9 @@ class TMCErrorCheck:
             count += 1
             if count >= 3:
                 fmt = self.fields.pretty_format(reg_name, val)
-                raise self.printer.command_error("TMC '%s' reports error: %s"
-                                                 % (self.stepper_name, fmt))
+                raise self.printer.command_error(
+                    f"TMC '{self.stepper_name}' reports error: {fmt}"
+                )
             if try_clear and val & err_mask:
                 try_clear = False
                 cleared_flags |= val & err_mask
@@ -255,7 +256,7 @@ class TMCCommandHelper:
         field_name = gcmd.get('FIELD').lower()
         reg_name = self.fields.lookup_register(field_name, None)
         if reg_name is None:
-            raise gcmd.error("Unknown field name '%s'" % (field_name,))
+            raise gcmd.error(f"Unknown field name '{field_name}'")
         value = gcmd.get_int('VALUE')
         reg_val = self.fields.set_field(field_name, value)
         print_time = self.printer.lookup_object('toolhead').get_last_move_time()
@@ -387,7 +388,7 @@ class TMCCommandHelper:
                'phase_offset_position': cpos,
                'run_current': current[0],
                'hold_current': current[1]}
-        res.update(self.echeck_helper.get_status(eventtime))
+        res |= self.echeck_helper.get_status(eventtime)
         return res
     # DUMP_TMC support
     def setup_register_dump(self, read_registers, read_translate=None):
@@ -423,23 +424,22 @@ class TMCVirtualPinHelper:
         self.printer = config.get_printer()
         self.mcu_tmc = mcu_tmc
         self.fields = mcu_tmc.get_fields()
-        if self.fields.lookup_register('diag0_stall') is not None:
-            if config.get('diag0_pin', None) is not None:
-                self.diag_pin = config.get('diag0_pin')
-                self.diag_pin_field = 'diag0_stall'
-            else:
-                self.diag_pin = config.get('diag1_pin', None)
-                self.diag_pin_field = 'diag1_stall'
-        else:
+        if self.fields.lookup_register('diag0_stall') is None:
             self.diag_pin = config.get('diag_pin', None)
             self.diag_pin_field = None
+        elif config.get('diag0_pin', None) is not None:
+            self.diag_pin = config.get('diag0_pin')
+            self.diag_pin_field = 'diag0_stall'
+        else:
+            self.diag_pin = config.get('diag1_pin', None)
+            self.diag_pin_field = 'diag1_stall'
         self.mcu_endstop = None
         self.en_pwm = False
         self.pwmthrs = 0
         # Register virtual_endstop pin
         name_parts = config.get_name().split()
         ppins = self.printer.lookup_object("pins")
-        ppins.register_chip("%s_%s" % (name_parts[0], name_parts[-1]), self)
+        ppins.register_chip(f"{name_parts[0]}_{name_parts[-1]}", self)
     def setup_pin(self, pin_type, pin_params):
         # Validate pin
         ppins = self.printer.lookup_object('pins')
@@ -517,8 +517,7 @@ def TMCMicrostepHelper(config, mcu_tmc):
 def TMCStealthchopHelper(config, mcu_tmc, tmc_freq):
     fields = mcu_tmc.get_fields()
     en_pwm_mode = False
-    velocity = config.getfloat('stealthchop_threshold', 0., minval=0.)
-    if velocity:
+    if velocity := config.getfloat('stealthchop_threshold', 0.0, minval=0.0):
         stepper_name = " ".join(config.get_name().split()[1:])
         stepper_config = config.getsection(stepper_name)
         step_dist = stepper.parse_step_distance(stepper_config)

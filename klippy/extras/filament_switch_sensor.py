@@ -95,9 +95,9 @@ class RunoutHelper:
     cmd_QUERY_FILAMENT_SENSOR_help = "Query the status of the Filament Sensor"
     def cmd_QUERY_FILAMENT_SENSOR(self, gcmd):
         if self.filament_present:
-            msg = "Filament Sensor %s: filament detected" % (self.name)
+            msg = f"Filament Sensor {self.name}: filament detected"
         else:
-            msg = "Filament Sensor %s: filament not detected" % (self.name)
+            msg = f"Filament Sensor {self.name}: filament not detected"
         gcmd.respond_info(msg)
     cmd_SET_FILAMENT_SENSOR_help = "Sets the filament sensor on/off"
     def cmd_SET_FILAMENT_SENSOR(self, gcmd):

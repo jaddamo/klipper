@@ -231,16 +231,14 @@ def check_build_code(sources, target):
 
 # Check if the current gcc version supports a particular command-line option
 def check_gcc_option(option):
-    cmd = "%s %s -S -o /dev/null -xc /dev/null > /dev/null 2>&1" % (
-        GCC_CMD, option)
+    cmd = f"{GCC_CMD} {option} -S -o /dev/null -xc /dev/null > /dev/null 2>&1"
     res = os.system(cmd)
     return res == 0
 
 # Check if the current gcc version supports a particular command-line option
 def do_build_code(cmd):
-    res = os.system(cmd)
-    if res:
-        msg = "Unable to build C code module (error=%s)" % (res,)
+    if res := os.system(cmd):
+        msg = f"Unable to build C code module (error={res})"
         logging.error(msg)
         raise Exception(msg)
 
@@ -262,9 +260,9 @@ def get_ffi():
         destlib = get_abs_files(srcdir, [DEST_LIB])[0]
         if check_build_code(srcfiles+ofiles+[__file__], destlib):
             if check_gcc_option(SSE_FLAGS):
-                cmd = "%s %s %s" % (GCC_CMD, SSE_FLAGS, COMPILE_ARGS)
+                cmd = f"{GCC_CMD} {SSE_FLAGS} {COMPILE_ARGS}"
             else:
-                cmd = "%s %s" % (GCC_CMD, COMPILE_ARGS)
+                cmd = f"{GCC_CMD} {COMPILE_ARGS}"
             logging.info("Building C code module %s", DEST_LIB)
             do_build_code(cmd % (destlib, ' '.join(srcfiles)))
         FFI_main = cffi.FFI()

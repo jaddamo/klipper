@@ -50,8 +50,8 @@ class QueueListener(logging.handlers.TimedRotatingFileHandler):
         lines = [self.rollover_info[name]
                  for name in sorted(self.rollover_info)]
         lines.append(
-            "=============== Log rollover at %s ===============" % (
-                time.asctime(),))
+            f"=============== Log rollover at {time.asctime()} ==============="
+        )
         self.emit(logging.makeLogRecord(
             {'msg': "\n".join(lines), 'level': logging.INFO}))
 

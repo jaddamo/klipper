@@ -60,8 +60,8 @@ class DataLogger:
         self.poll.register(self.webhook_socket, select.POLLIN | select.POLLHUP)
         self.socket_data = b""
         # Data log
-        self.logger = LogWriter(log_prefix + ".json.gz")
-        self.index = LogWriter(log_prefix + ".index.gz")
+        self.logger = LogWriter(f"{log_prefix}.json.gz")
+        self.index = LogWriter(f"{log_prefix}.index.gz")
         # Handlers
         self.query_handlers = {}
         self.async_handlers = {}
@@ -145,18 +145,21 @@ class DataLogger:
         # Subscribe to trapq and stepper queue updates
         motion_report = status.get("motion_report", {})
         for trapq in motion_report.get("trapq", []):
-            self.send_subscribe("trapq:" + trapq, "motion_report/dump_trapq",
-                                {"name": trapq})
+            self.send_subscribe(
+                f"trapq:{trapq}", "motion_report/dump_trapq", {"name": trapq}
+            )
         for stepper in motion_report.get("steppers", []):
-            self.send_subscribe("stepq:" + stepper,
-                                "motion_report/dump_stepper", {"name": stepper})
+            self.send_subscribe(
+                f"stepq:{stepper}", "motion_report/dump_stepper", {"name": stepper}
+            )
         # Subscribe to additional sensor data
         config = status["configfile"]["settings"]
         for cfgname in config.keys():
             if cfgname == "adxl345" or cfgname.startswith("adxl345 "):
                 aname = cfgname.split()[-1]
-                self.send_subscribe("adxl345:" + aname, "adxl345/dump_adxl345",
-                                    {"sensor": aname})
+                self.send_subscribe(
+                    f"adxl345:{aname}", "adxl345/dump_adxl345", {"sensor": aname}
+                )
     def handle_dump(self, msg, raw_msg):
         msg_id = msg["id"]
         if "result" not in msg:

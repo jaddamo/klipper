@@ -47,15 +47,17 @@ class HomingMove:
     def _calc_endstop_rate(self, mcu_endstop, movepos, speed):
         startpos = self.toolhead.get_position()
         axes_d = [mp - sp for mp, sp in zip(movepos, startpos)]
-        move_d = math.sqrt(sum([d*d for d in axes_d[:3]]))
+        move_d = math.sqrt(sum(d*d for d in axes_d[:3]))
         move_t = move_d / speed
-        max_steps = max([(abs(s.calc_position_from_coord(startpos)
-                              - s.calc_position_from_coord(movepos))
-                          / s.get_step_dist())
-                         for s in mcu_endstop.get_steppers()])
-        if max_steps <= 0.:
-            return .001
-        return move_t / max_steps
+        max_steps = max(
+            abs(
+                s.calc_position_from_coord(startpos)
+                - s.calc_position_from_coord(movepos)
+            )
+            / s.get_step_dist()
+            for s in mcu_endstop.get_steppers()
+        )
+        return .001 if max_steps <= 0. else move_t / max_steps
     def calc_toolhead_pos(self, kin_spos, offsets):
         kin_spos = dict(kin_spos)
         kin = self.toolhead.get_kinematics()
@@ -92,7 +94,7 @@ class HomingMove:
         try:
             self.toolhead.drip_move(movepos, speed, all_endstop_trigger)
         except self.printer.command_error as e:
-            error = "Error during homing move: %s" % (str(e),)
+            error = f"Error during homing move: {str(e)}"
         # Wait for endstops to trigger
         trigger_times = {}
         move_end_print_time = self.toolhead.get_last_move_time()
@@ -101,9 +103,9 @@ class HomingMove:
             if trigger_time > 0.:
                 trigger_times[name] = trigger_time
             elif trigger_time < 0. and error is None:
-                error = "Communication timeout during homing %s" % (name,)
+                error = f"Communication timeout during homing {name}"
             elif check_triggered and error is None:
-                error = "No trigger on %s after full movement" % (name,)
+                error = f"No trigger on {name} after full movement"
         # Determine stepper halt positions
         self.toolhead.flush_step_generation()
         for sp in self.stepper_positions:
@@ -139,10 +141,14 @@ class HomingMove:
     def check_no_movement(self):
         if self.printer.get_start_args().get('debuginput') is not None:
             return None
-        for sp in self.stepper_positions:
-            if sp.start_pos == sp.trig_pos:
-                return sp.endstop_name
-        return None
+        return next(
+            (
+                sp.endstop_name
+                for sp in self.stepper_positions
+                if sp.start_pos == sp.trig_pos
+            ),
+            None,
+        )
 
 # State tracking of homing requests
 class Homing:
@@ -188,7 +194,7 @@ class Homing:
             startpos = self._fill_coord(forcepos)
             homepos = self._fill_coord(movepos)
             axes_d = [hp - sp for hp, sp in zip(homepos, startpos)]
-            move_d = math.sqrt(sum([d*d for d in axes_d[:3]]))
+            move_d = math.sqrt(sum(d*d for d in axes_d[:3]))
             retract_r = min(1., hi.retract_dist / move_d)
             retractpos = [hp - ad * retract_r
                           for hp, ad in zip(homepos, axes_d)]
@@ -201,8 +207,8 @@ class Homing:
             hmove.homing_move(homepos, hi.second_homing_speed)
             if hmove.check_no_movement() is not None:
                 raise self.printer.command_error(
-                    "Endstop %s still triggered after retract"
-                    % (hmove.check_no_movement(),))
+                    f"Endstop {hmove.check_no_movement()} still triggered after retract"
+                )
         # Signal home operation complete
         self.toolhead.flush_step_generation()
         self.trigger_mcu_pos = {sp.stepper_name: sp.trig_pos
@@ -253,11 +259,11 @@ class PrinterHoming:
                 "Probe triggered prior to movement")
         return epos
     def cmd_G28(self, gcmd):
-        # Move to origin
-        axes = []
-        for pos, axis in enumerate('XYZ'):
-            if gcmd.get(axis, None) is not None:
-                axes.append(pos)
+        axes = [
+            pos
+            for pos, axis in enumerate('XYZ')
+            if gcmd.get(axis, None) is not None
+        ]
         if not axes:
             axes = [0, 1, 2]
         homing_state = Homing(self.printer)

@@ -97,16 +97,11 @@ class ControlAutoTune:
                 self.peak = temp
                 self.peak_time = read_time
     def check_busy(self, eventtime, smoothed_temp, target_temp):
-        if self.heating or len(self.peaks) < 12:
-            return True
-        return False
+        return bool(self.heating or len(self.peaks) < 12)
     # Analysis
     def check_peaks(self):
         self.peaks.append((self.peak, self.peak_time))
-        if self.heating:
-            self.peak = 9999999.
-        else:
-            self.peak = -9999999.
+        self.peak = 9999999. if self.heating else -9999999.
         if len(self.peaks) < 4:
             return
         self.calc_pid(len(self.peaks)-1)
@@ -136,9 +131,8 @@ class ControlAutoTune:
         pwm = ["pwm: %.3f %.3f" % (time, value)
                for time, value in self.pwm_samples]
         out = ["%.3f %.3f" % (time, temp) for time, temp in self.temp_samples]
-        f = open(filename, "wb")
-        f.write('\n'.join(pwm + out))
-        f.close()
+        with open(filename, "wb") as f:
+            f.write('\n'.join(pwm + out))
 
 def load_config(config):
     return PIDCalibrate(config)

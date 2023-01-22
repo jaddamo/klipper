@@ -46,10 +46,7 @@ class hd44780_spi:
             # Glyph framebuffer
             (self.glyph_framebuffer, bytearray(b'~'*64), 0x40) ]
     def send_4_bits(self, cmd, is_data, minclock):
-        if is_data:
-            mask = self.data_mask
-        else:
-            mask = self.command_mask
+        mask = self.data_mask if is_data else self.command_mask
         self.spi.spi_send([(cmd & 0xF0) | mask], minclock)
         self.spi.spi_send([(cmd & 0xF0) | mask | self.enable_mask], minclock)
         self.spi.spi_send([(cmd & 0xF0) | mask], minclock)
@@ -76,16 +73,17 @@ class hd44780_spi:
             for pos, count in diffs:
                 chip_pos = pos
                 self.send([fb_id + chip_pos])
-                self.send(new_data[pos:pos+count], is_data=True)
+                self.send(new_data[chip_pos:chip_pos + count], is_data=True)
             old_data[:] = new_data
     def init(self):
         curtime = self.printer.get_reactor().monotonic()
         print_time = self.mcu.estimated_print_time(curtime)
         # Program 4bit / 2-line mode and then issue 0x02 "Home" command
-        if self.hd44780_protocol_init:
-            init = [[0x33], [0x33], [0x32], [0x28, 0x28, 0x02]]
-        else:
-            init = [[0x02]]
+        init = (
+            [[0x33], [0x33], [0x32], [0x28, 0x28, 0x02]]
+            if self.hd44780_protocol_init
+            else [[0x02]]
+        )
         # Reset (set positive direction ; enable display and hide cursor)
         init.append([0x06, 0x0c])
         for i, cmds in enumerate(init):

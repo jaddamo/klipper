@@ -141,20 +141,15 @@ class MAX31856(SensorBase):
         # Fix sign bit:
         if adc & 0x40000:
             adc = ((adc & 0x3FFFF) + 1) * -1
-        temp = MAX31856_MULT * adc
-        return temp
+        return MAX31856_MULT * adc
     def calc_adc(self, temp):
         adc = int( ( temp / MAX31856_MULT ) + 0.5 ) # convert to ADC value
-        adc = max(0, min(0x3FFFF, adc)) << MAX31856_SCALE
-        return adc
+        return max(0, min(0x3FFFF, adc)) << MAX31856_SCALE
     def build_spi_init(self, config):
-        cmds = []
         value = MAX31856_CR0_AUTOCONVERT
         if config.getboolean('tc_use_50Hz_filter', False):
             value |= MAX31856_CR0_FILT50HZ
-        cmds.append(0x80 + MAX31856_CR0_REG)
-        cmds.append(value)
-
+        cmds = [0x80 + MAX31856_CR0_REG, value]
         types = {
             "B" : 0b0000,
             "E" : 0b0001,
@@ -203,12 +198,10 @@ class MAX31855(SensorBase):
         # Fix sign bit:
         if adc & 0x2000:
             adc = ((adc & 0x1FFF) + 1) * -1
-        temp = MAX31855_MULT * adc
-        return temp
+        return MAX31855_MULT * adc
     def calc_adc(self, temp):
         adc = int( ( temp / MAX31855_MULT ) + 0.5 ) # convert to ADC value
-        adc = max(0, min(0x1FFF, adc)) << MAX31855_SCALE
-        return adc
+        return max(0, min(0x1FFF, adc)) << MAX31855_SCALE
 
 
 ######################################################################
@@ -230,12 +223,10 @@ class MAX6675(SensorBase):
         # Fix sign bit:
         if adc & 0x2000:
             adc = ((adc & 0x1FFF) + 1) * -1
-        temp = MAX6675_MULT * adc
-        return temp
+        return MAX6675_MULT * adc
     def calc_adc(self, temp):
         adc = int( ( temp / MAX6675_MULT ) + 0.5 ) # convert to ADC value
-        adc = max(0, min(0x1FFF, adc)) << MAX6675_SCALE
-        return adc
+        return max(0, min(0x1FFF, adc)) << MAX6675_SCALE
 
 
 ######################################################################
@@ -302,8 +293,7 @@ class MAX31865(SensorBase):
         # Solve for temp using quadratic equation:
         #  temp = (-b +- sqrt(b**2 - 4ac)) / 2a
         discriminant = math.sqrt(CVD_A**2 - 4. * CVD_B * (1. - R_div_nominal))
-        temp = (-CVD_A + discriminant) / (2. * CVD_B)
-        return temp
+        return (-CVD_A + discriminant) / (2. * CVD_B)
     def calc_adc(self, temp):
         # Calculate relative resistance via Callendar-Van Dusen formula:
         #  resistance = rtd_nominal_r * (1 + CVD_A * temp + CVD_B * temp**2)

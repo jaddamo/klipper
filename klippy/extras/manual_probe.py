@@ -187,9 +187,7 @@ class ManualProbeHelper:
         self.gcode.register_command('NEXT', None)
         self.gcode.register_command('ABORT', None)
         self.gcode.register_command('TESTZ', None)
-        kin_pos = None
-        if success:
-            kin_pos = self.get_kinematics_pos()
+        kin_pos = self.get_kinematics_pos() if success else None
         self.finalize_callback(kin_pos)
 
 def load_config(config):

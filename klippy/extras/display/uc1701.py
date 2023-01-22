@@ -18,7 +18,7 @@ class DisplayBase:
         # framebuffers
         self.columns = columns
         self.x_offset = x_offset
-        self.vram = [bytearray(self.columns) for i in range(8)]
+        self.vram = [bytearray(self.columns) for _ in range(8)]
         self.all_framebuffers = [(self.vram[i], bytearray(b'~'*self.columns), i)
                                  for i in range(8)]
         # Cache fonts and icons in display byte order
@@ -132,10 +132,7 @@ class I2C:
         self.i2c = bus.MCU_I2C_from_config(config, default_addr=default_addr,
                                            default_speed=400000)
     def send(self, cmds, is_data=False):
-        if is_data:
-            hdr = 0x40
-        else:
-            hdr = 0x00
+        hdr = 0x40 if is_data else 0x00
         cmds = bytearray(cmds)
         cmds.insert(0, hdr)
         self.i2c.i2c_write(cmds, reqclock=BACKGROUND_PRIORITY_CLOCK)

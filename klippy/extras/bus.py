@@ -10,22 +10,20 @@ def resolve_bus_name(mcu, param, bus):
     enumerations = mcu.get_enumerations()
     enums = enumerations.get(param, enumerations.get('bus'))
     if enums is None:
-        if bus is None:
-            return 0
-        return bus
+        return 0 if bus is None else bus
     # Verify bus is a valid enumeration
     ppins = mcu.get_printer().lookup_object("pins")
     mcu_name = mcu.get_name()
     if bus is None:
         rev_enums = {v: k for k, v in enums.items()}
         if 0 not in rev_enums:
-            raise ppins.error("Must specify %s on mcu '%s'" % (param, mcu_name))
+            raise ppins.error(f"Must specify {param} on mcu '{mcu_name}'")
         bus = rev_enums[0]
     if bus not in enums:
-        raise ppins.error("Unknown %s '%s'" % (param, bus))
+        raise ppins.error(f"Unknown {param} '{bus}'")
     # Check for reserved bus pins
     constants = mcu.get_constants()
-    reserve_pins = constants.get('BUS_PINS_%s' % (bus,), None)
+    reserve_pins = constants.get(f'BUS_PINS_{bus}', None)
     pin_resolver = ppins.get_pin_resolver(mcu_name)
     if reserve_pins is not None:
         for pin in reserve_pins.split(','):
@@ -116,15 +114,15 @@ def MCU_SPI_from_config(config, mode, pin_option="cs_pin",
     mcu = cs_pin_params['chip']
     speed = config.getint('spi_speed', default_speed, minval=100000)
     if config.get('spi_software_sclk_pin', None) is not None:
-        sw_pin_names = ['spi_software_%s_pin' % (name,)
-                        for name in ['miso', 'mosi', 'sclk']]
+        sw_pin_names = [
+            f'spi_software_{name}_pin' for name in ['miso', 'mosi', 'sclk']
+        ]
         sw_pin_params = [ppins.lookup_pin(config.get(name), share_type=name)
                          for name in sw_pin_names]
         for pin_params in sw_pin_params:
             if pin_params['chip'] != mcu:
-                raise ppins.error("%s: spi pins must be on same mcu" % (
-                    config.get_name(),))
-        sw_pins = tuple([pin_params['pin'] for pin_params in sw_pin_params])
+                raise ppins.error(f"{config.get_name()}: spi pins must be on same mcu")
+        sw_pins = tuple(pin_params['pin'] for pin_params in sw_pin_params)
         bus = None
     else:
         bus = config.get('spi_bus', None)
@@ -220,8 +218,7 @@ class MCU_bus_digital_out:
         ppins = mcu.get_printer().lookup_object('pins')
         pin_params = ppins.lookup_pin(pin_desc)
         if pin_params['chip'] is not mcu:
-            raise ppins.error("Pin %s must be on mcu %s" % (
-                pin_desc, mcu.get_name()))
+            raise ppins.error(f"Pin {pin_desc} must be on mcu {mcu.get_name()}")
         mcu.add_config_cmd("config_digital_out oid=%d pin=%s value=%d"
                            " default_value=%d max_duration=%d"
                            % (self.oid, pin_params['pin'], value, value, 0))

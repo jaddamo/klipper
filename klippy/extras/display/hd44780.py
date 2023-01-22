@@ -19,8 +19,10 @@ class HD44780:
         self.printer = config.get_printer()
         # pin config
         ppins = self.printer.lookup_object('pins')
-        pins = [ppins.lookup_pin(config.get(name + '_pin'))
-                for name in ['rs', 'e', 'd4', 'd5', 'd6', 'd7']]
+        pins = [
+            ppins.lookup_pin(config.get(f'{name}_pin'))
+            for name in ['rs', 'e', 'd4', 'd5', 'd6', 'd7']
+        ]
         self.hd44780_protocol_init = config.getboolean('hd44780_protocol_init',
                                                        True)
         self.line_length = config.getchoice('line_length', LINE_LENGTH_OPTIONS,
@@ -61,9 +63,7 @@ class HD44780:
         self.send_data_cmd = self.mcu.lookup_command(
             "hd44780_send_data oid=%c data=%*s", cq=cmd_queue)
     def send(self, cmds, is_data=False):
-        cmd_type = self.send_cmds_cmd
-        if is_data:
-            cmd_type = self.send_data_cmd
+        cmd_type = self.send_data_cmd if is_data else self.send_cmds_cmd
         cmd_type.send([self.oid, cmds], reqclock=BACKGROUND_PRIORITY_CLOCK)
         #logging.debug("hd44780 %d %s", is_data, repr(cmds))
     def flush(self):
@@ -85,16 +85,17 @@ class HD44780:
             for pos, count in diffs:
                 chip_pos = pos
                 self.send([fb_id + chip_pos])
-                self.send(new_data[pos:pos+count], is_data=True)
+                self.send(new_data[chip_pos:chip_pos + count], is_data=True)
             old_data[:] = new_data
     def init(self):
         curtime = self.printer.get_reactor().monotonic()
         print_time = self.mcu.estimated_print_time(curtime)
         # Program 4bit / 2-line mode and then issue 0x02 "Home" command
-        if self.hd44780_protocol_init:
-            init = [[0x33], [0x33], [0x32], [0x28, 0x28, 0x02]]
-        else:
-            init = [[0x02]]
+        init = (
+            [[0x33], [0x33], [0x32], [0x28, 0x28, 0x02]]
+            if self.hd44780_protocol_init
+            else [[0x02]]
+        )
         # Reset (set positive direction ; enable display and hide cursor)
         init.append([0x06, 0x0c])
         for i, cmds in enumerate(init):

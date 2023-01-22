@@ -117,14 +117,21 @@ class DumpStepper:
     def log_steps(self, data):
         if not data:
             return
-        out = []
-        out.append("Dumping stepper '%s' (%s) %d queue_step:"
-                   % (self.mcu_stepper.get_name(),
-                      self.mcu_stepper.get_mcu().get_name(), len(data)))
-        for i, s in enumerate(data):
-            out.append("queue_step %d: t=%d p=%d i=%d c=%d a=%d"
-                       % (i, s.first_clock, s.start_position, s.interval,
-                          s.step_count, s.add))
+        out = [
+            (
+                "Dumping stepper '%s' (%s) %d queue_step:"
+                % (
+                    self.mcu_stepper.get_name(),
+                    self.mcu_stepper.get_mcu().get_name(),
+                    len(data),
+                )
+            )
+        ]
+        out.extend(
+            "queue_step %d: t=%d p=%d i=%d c=%d a=%d"
+            % (i, s.first_clock, s.start_position, s.interval, s.step_count, s.add)
+            for i, s in enumerate(data)
+        )
         logging.info('\n'.join(out))
     def _api_update(self, eventtime):
         data, cdata = self.get_step_queue(self.last_api_clock, 1<<63)
@@ -183,11 +190,24 @@ class DumpTrapQ:
         if not data:
             return
         out = ["Dumping trapq '%s' %d moves:" % (self.name, len(data))]
-        for i, m in enumerate(data):
-            out.append("move %d: pt=%.6f mt=%.6f sv=%.6f a=%.6f"
-                       " sp=(%.6f,%.6f,%.6f) ar=(%.6f,%.6f,%.6f)"
-                       % (i, m.print_time, m.move_t, m.start_v, m.accel,
-                          m.start_x, m.start_y, m.start_z, m.x_r, m.y_r, m.z_r))
+        out.extend(
+            "move %d: pt=%.6f mt=%.6f sv=%.6f a=%.6f"
+            " sp=(%.6f,%.6f,%.6f) ar=(%.6f,%.6f,%.6f)"
+            % (
+                i,
+                m.print_time,
+                m.move_t,
+                m.start_v,
+                m.accel,
+                m.start_x,
+                m.start_y,
+                m.start_z,
+                m.x_r,
+                m.y_r,
+                m.z_r,
+            )
+            for i, m in enumerate(data)
+        )
         logging.info('\n'.join(out))
     def get_trapq_position(self, print_time):
         ffi_main, ffi_lib = chelper.get_ffi()

@@ -9,7 +9,7 @@ import stepper, mathutil, chelper
 class RotaryDeltaKinematics:
     def __init__(self, toolhead, config):
         # Setup tower rails
-        stepper_configs = [config.getsection('stepper_' + a) for a in 'abc']
+        stepper_configs = [config.getsection(f'stepper_{a}') for a in 'abc']
         rail_a = stepper.PrinterRail(
             stepper_configs[0], need_position_minmax=False,
             units_in_radians=True)
@@ -64,12 +64,12 @@ class RotaryDeltaKinematics:
             self.calibration.actuator_to_cartesian(eangles))
         self.max_z = min(endstops)
         self.min_z = config.getfloat('minimum_z_position', 0, maxval=self.max_z)
-        min_ua = min([shoulder_radius + ua for ua in upper_arms])
-        min_la = min([la - shoulder_radius for la in lower_arms])
+        min_ua = min(shoulder_radius + ua for ua in upper_arms)
+        min_la = min(la - shoulder_radius for la in lower_arms)
         self.max_xy2 = min(min_ua, min_la)**2
         arm_z = [self.calibration.elbow_coord(i, ea)[2]
                  for i, ea in enumerate(eangles)]
-        self.limit_z = min([az - la for az, la in zip(arm_z, lower_arms)])
+        self.limit_z = min(az - la for az, la in zip(arm_z, lower_arms))
         logging.info(
             "Delta max build height %.2fmm (radius tapered above %.2fmm)"
             % (self.max_z, self.limit_z))
@@ -158,21 +158,21 @@ class RotaryDeltaCalibration:
         params = { 'shoulder_radius': self.shoulder_radius,
                    'shoulder_height': self.shoulder_height }
         for i, axis in enumerate('abc'):
-            params['angle_'+axis] = self.angles[i]
-            params['upper_arm_'+axis] = self.upper_arms[i]
-            params['lower_arm_'+axis] = self.lower_arms[i]
-            params['endstop_'+axis] = self.endstops[i]
-            params['stepdist_'+axis] = self.stepdists[i]
+            params[f'angle_{axis}'] = self.angles[i]
+            params[f'upper_arm_{axis}'] = self.upper_arms[i]
+            params[f'lower_arm_{axis}'] = self.lower_arms[i]
+            params[f'endstop_{axis}'] = self.endstops[i]
+            params[f'stepdist_{axis}'] = self.stepdists[i]
         return adj_params, params
     def new_calibration(self, params):
         # Create a new calibration object from coordinate_descent params
         shoulder_radius = params['shoulder_radius']
         shoulder_height = params['shoulder_height']
-        angles = [params['angle_'+a] for a in 'abc']
-        upper_arms = [params['upper_arm_'+a] for a in 'abc']
-        lower_arms = [params['lower_arm_'+a] for a in 'abc']
-        endstops = [params['endstop_'+a] for a in 'abc']
-        stepdists = [params['stepdist_'+a] for a in 'abc']
+        angles = [params[f'angle_{a}'] for a in 'abc']
+        upper_arms = [params[f'upper_arm_{a}'] for a in 'abc']
+        lower_arms = [params[f'lower_arm_{a}'] for a in 'abc']
+        endstops = [params[f'endstop_{a}'] for a in 'abc']
+        stepdists = [params[f'stepdist_{a}'] for a in 'abc']
         return RotaryDeltaCalibration(
             shoulder_radius, shoulder_height, angles, upper_arms, lower_arms,
             endstops, stepdists)
@@ -210,9 +210,10 @@ class RotaryDeltaCalibration:
         configfile.set('printer', 'shoulder_height', "%.6f"
                        % (self.shoulder_height,))
         for i, axis in enumerate('abc'):
-            configfile.set('stepper_'+axis, 'angle', "%.6f" % (self.angles[i],))
-            configfile.set('stepper_'+axis, 'position_endstop',
-                           "%.6f" % (self.endstops[i],))
+            configfile.set(f'stepper_{axis}', 'angle', "%.6f" % (self.angles[i],))
+            configfile.set(
+                f'stepper_{axis}', 'position_endstop', "%.6f" % (self.endstops[i],)
+            )
         gcode = configfile.get_printer().lookup_object("gcode")
         gcode.respond_info(
             "stepper_a: position_endstop: %.6f angle: %.6f\n"

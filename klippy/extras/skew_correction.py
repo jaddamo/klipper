@@ -111,7 +111,7 @@ class PrinterSkew:
                     raise gcmd.error(
                         "skew_correction: improperly formatted entry for "
                         "plane [%s]\n%s" % (plane, gcmd.get_commandline()))
-                factor = plane.lower() + '_factor'
+                factor = f'{plane.lower()}_factor'
                 setattr(self, factor, calc_skew_factor(*lengths))
     cmd_SKEW_PROFILE_help = "Profile management for skew_correction"
     def cmd_SKEW_PROFILE(self, gcmd):
@@ -119,15 +119,13 @@ class PrinterSkew:
             name = gcmd.get('LOAD')
             prof = self.skew_profiles.get(name)
             if prof is None:
-                gcmd.respond_info(
-                    "skew_correction:  Load failed, unknown profile [%s]"
-                    % (name))
+                gcmd.respond_info(f"skew_correction:  Load failed, unknown profile [{name}]")
                 return
             self._update_skew(prof['xy_skew'], prof['xz_skew'], prof['yz_skew'])
         elif gcmd.get('SAVE', None) is not None:
             name = gcmd.get('SAVE')
             configfile = self.printer.lookup_object('configfile')
-            cfg_name = self.name + " " + name
+            cfg_name = f"{self.name} {name}"
             configfile.set(cfg_name, 'xy_skew', self.xy_factor)
             configfile.set(cfg_name, 'xz_skew', self.xz_factor)
             configfile.set(cfg_name, 'yz_skew', self.yz_factor)
@@ -146,16 +144,14 @@ class PrinterSkew:
             name = gmcd.get('REMOVE')
             if name in self.skew_profiles:
                 configfile = self.printer.lookup_object('configfile')
-                configfile.remove_section('skew_correction ' + name)
+                configfile.remove_section(f'skew_correction {name}')
                 del self.skew_profiles[name]
                 gcmd.respond_info(
                     "Profile [%s] removed from storage for this session.\n"
                     "The SAVE_CONFIG command will update the printer\n"
                     "configuration and restart the printer" % (name))
             else:
-                gcmd.respond_info(
-                    "skew_correction: No profile named [%s] to remove"
-                    % (name))
+                gcmd.respond_info(f"skew_correction: No profile named [{name}] to remove")
 
 
 def load_config(config):

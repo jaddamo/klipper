@@ -89,12 +89,13 @@ class HTU21D:
         self.resolution = config.get('htu21d_resolution','TEMP12_HUM08')
         self.report_time = config.getint('htu21d_report_time',30,minval=5)
         if self.resolution not in HTU21D_RESOLUTIONS:
-            raise config.error("Invalid HTU21D Resolution. Valid are %s"
-                % '|'.join(HTU21D_RESOLUTIONS.keys()))
+            raise config.error(
+                f"Invalid HTU21D Resolution. Valid are {'|'.join(HTU21D_RESOLUTIONS.keys())}"
+            )
         self.deviceId = config.get('sensor_type')
         self.temp = self.min_temp = self.max_temp = self.humidity = 0.
         self.sample_timer = self.reactor.register_timer(self._sample_htu21d)
-        self.printer.add_object("htu21d " + self.name, self)
+        self.printer.add_object(f"htu21d {self.name}", self)
         self.printer.register_event_handler("klippy:connect",
                                             self.handle_connect)
 
@@ -132,8 +133,8 @@ class HTU21D:
             filter(
               lambda elem: HTU21D_DEVICES[elem]['id'] == rdevId,HTU21D_DEVICES)
             )
-        if len(deviceId_list) != 0:
-            logging.info("htu21d: Found Device Type %s" % deviceId_list[0])
+        if deviceId_list:
+            logging.info(f"htu21d: Found Device Type {deviceId_list[0]}")
         else:
             logging.warn("htu21d: Unknown Device ID %#x " % rdevId)
 
@@ -148,7 +149,7 @@ class HTU21D:
         registerData = response[0] & HTU21D_RESOLUTION_MASK
         registerData |= HTU21D_RESOLUTIONS[self.resolution]
         self.i2c.i2c_write([HTU21D_COMMANDS['WRITE']],registerData)
-        logging.info("htu21d: Setting resolution to %s " % self.resolution)
+        logging.info(f"htu21d: Setting resolution to {self.resolution} ")
 
     def _sample_htu21d(self, eventtime):
         try:
@@ -226,7 +227,7 @@ class HTU21D:
         return measured_time + self.report_time
 
     def _chekCRC8(self,data):
-        for bit in range(0,16):
+        for _ in range(16):
             if (data & 0x8000):
                 data = (data << 1) ^ HTU21D_CRC8_POLYNOMINAL;
             else:

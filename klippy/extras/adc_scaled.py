@@ -15,7 +15,7 @@ class MCU_scaled_adc:
         self._last_state = (0., 0.)
         self._mcu_adc = main.mcu.setup_pin('adc', pin_params)
         query_adc = main.printer.lookup_object('query_adc')
-        qname = main.name + ":" + pin_params['pin']
+        qname = f"{main.name}:" + pin_params['pin']
         query_adc.register_adc(qname, self._mcu_adc)
         self._callback = None
         self.setup_minmax = self._mcu_adc.setup_minmax
@@ -50,14 +50,14 @@ class PrinterADCScaled:
         ppins = self.printer.lookup_object('pins')
         ppins.register_chip(self.name, self)
     def _config_pin(self, config, name, callback):
-        pin_name = config.get(name + '_pin')
+        pin_name = config.get(f'{name}_pin')
         ppins = self.printer.lookup_object('pins')
         mcu_adc = ppins.setup_pin('adc', pin_name)
         mcu_adc.setup_adc_callback(REPORT_TIME, callback)
         mcu_adc.setup_minmax(SAMPLE_TIME, SAMPLE_COUNT, minval=0., maxval=1.,
                              range_check_count=RANGE_CHECK_COUNT)
         query_adc = config.get_printer().load_object(config, 'query_adc')
-        query_adc.register_adc(self.name + ":" + name, mcu_adc)
+        query_adc.register_adc(f"{self.name}:{name}", mcu_adc)
         return mcu_adc
     def setup_pin(self, pin_type, pin_params):
         if pin_type != 'adc':

@@ -104,12 +104,22 @@ def orderfuncs(funcaddrs, availfuncs):
     return out
 
 hex_s = r'[0-9a-f]+'
-re_func = re.compile(r'^(?P<funcaddr>' + hex_s + r') <(?P<func>.*)>:$')
+re_func = re.compile(f'^(?P<funcaddr>{hex_s}) <(?P<func>.*)>:$')
 re_asm = re.compile(
-    r'^[ ]*(?P<insnaddr>' + hex_s
-    + r'):\t[^\t]*\t(?P<insn>[^\t]+?)(?P<params>\t[^;]*)?'
-    + r'[ ]*(; (?P<calladdr>0x' + hex_s
-    + r') <(?P<ref>.*)>)?$')
+    (
+        (
+            (
+                (
+                    f'^[ ]*(?P<insnaddr>{hex_s}'
+                    + r'):\t[^\t]*\t(?P<insn>[^\t]+?)(?P<params>\t[^;]*)?'
+                )
+                + r'[ ]*(; (?P<calladdr>0x'
+            )
+            + hex_s
+        )
+        + r') <(?P<ref>.*)>)?$'
+    )
+)
 
 def main():
     unknownfunc = function(None, "<unknown>")

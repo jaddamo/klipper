@@ -26,7 +26,7 @@ class VirtualSD:
         # Register commands
         self.gcode = printer.lookup_object('gcode')
         for cmd in ['M20', 'M21', 'M23', 'M24', 'M25', 'M26', 'M27']:
-            self.gcode.register_command(cmd, getattr(self, 'cmd_' + cmd))
+            self.gcode.register_command(cmd, getattr(self, f'cmd_{cmd}'))
         for cmd in ['M28', 'M29', 'M30']:
             self.gcode.register_command(cmd, self.cmd_error)
         self.gcode.register_command(
@@ -87,14 +87,9 @@ class VirtualSD:
             'file_size': self.file_size,
         }
     def file_path(self):
-        if self.current_file:
-            return self.current_file.name
-        return None
+        return self.current_file.name if self.current_file else None
     def progress(self):
-        if self.file_size:
-            return float(self.file_position) / self.file_size
-        else:
-            return 0.
+        return float(self.file_position) / self.file_size if self.file_size else 0.
     def is_active(self):
         return self.work_timer is not None
     def do_pause(self):

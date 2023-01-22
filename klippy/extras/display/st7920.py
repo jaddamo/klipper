@@ -21,7 +21,7 @@ class DisplayBase:
         # framebuffers
         self.text_framebuffer = bytearray(b' '*64)
         self.glyph_framebuffer = bytearray(128)
-        self.graphics_framebuffers = [bytearray(32) for i in range(32)]
+        self.graphics_framebuffers = [bytearray(32) for _ in range(32)]
         self.all_framebuffers = [
             # Text framebuffer
             (self.text_framebuffer, bytearray(b'~'*64), 0x80),
@@ -142,8 +142,10 @@ class ST7920(DisplayBase):
         printer = config.get_printer()
         # pin config
         ppins = printer.lookup_object('pins')
-        pins = [ppins.lookup_pin(config.get(name + '_pin'))
-                for name in ['cs', 'sclk', 'sid']]
+        pins = [
+            ppins.lookup_pin(config.get(f'{name}_pin'))
+            for name in ['cs', 'sclk', 'sid']
+        ]
         mcu = None
         for pin_params in pins:
             if mcu is not None and pin_params['chip'] != mcu:
@@ -176,9 +178,7 @@ class ST7920(DisplayBase):
         if is_data:
             cmd_type = self.send_data_cmd
         elif self.is_extended != is_extended:
-            add_cmd = 0x22
-            if is_extended:
-                add_cmd = 0x26
+            add_cmd = 0x26 if is_extended else 0x22
             cmds = [add_cmd] + cmds
             self.is_extended = is_extended
         cmd_type.send([self.oid, cmds], reqclock=BACKGROUND_PRIORITY_CLOCK)
@@ -210,17 +210,17 @@ class EmulatedST7920(DisplayBase):
     def __init__(self, config):
         # create software spi
         ppins = config.get_printer().lookup_object('pins')
-        sw_pin_names = ['spi_software_%s_pin' % (name,)
-                        for name in ['miso', 'mosi', 'sclk']]
+        sw_pin_names = [
+            f'spi_software_{name}_pin' for name in ['miso', 'mosi', 'sclk']
+        ]
         sw_pin_params = [ppins.lookup_pin(config.get(name), share_type=name)
                          for name in sw_pin_names]
         mcu = None
         for pin_params in sw_pin_params:
             if mcu is not None and pin_params['chip'] != mcu:
-                raise ppins.error("%s: spi pins must be on same mcu" % (
-                    config.get_name(),))
+                raise ppins.error(f"{config.get_name()}: spi pins must be on same mcu")
             mcu = pin_params['chip']
-        sw_pins = tuple([pin_params['pin'] for pin_params in sw_pin_params])
+        sw_pins = tuple(pin_params['pin'] for pin_params in sw_pin_params)
         speed = config.getint('spi_speed', 1000000, minval=100000)
         self.spi = bus.MCU_SPI(mcu, None, None, 0, speed, sw_pins)
         # create enable helper
@@ -235,9 +235,7 @@ class EmulatedST7920(DisplayBase):
         if not is_data:
             sync_byte = 0xf8
             if self.is_extended != is_extended:
-                add_cmd = 0x22
-                if is_extended:
-                    add_cmd = 0x26
+                add_cmd = 0x26 if is_extended else 0x22
                 cmds = [add_cmd] + cmds
                 self.is_extended = is_extended
         # copy data to ST7920 data format

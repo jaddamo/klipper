@@ -84,6 +84,7 @@ class ShaperCalibrate:
                 return
             child_conn.send((False, res))
             child_conn.close()
+
         # Start a process to perform the calculation
         calc_proc = multiprocessing.Process(target=wrapper)
         calc_proc.daemon = True
@@ -100,7 +101,7 @@ class ShaperCalibrate:
         # Return results
         is_err, res = parent_conn.recv()
         if is_err:
-            raise self.error("Error in remote calculation: %s" % (res,))
+            raise self.error(f"Error in remote calculation: {res}")
         calc_proc.join()
         parent_conn.close()
         return res
@@ -151,12 +152,11 @@ class ShaperCalibrate:
             return None
         if isinstance(raw_values, np.ndarray):
             data = raw_values
-        else:
-            samples = raw_values.get_samples()
-            if not samples:
-                return None
+        elif samples := raw_values.get_samples():
             data = np.array(samples)
 
+        else:
+            return None
         N = data.shape[0]
         T = data[-1,0] - data[0,0]
         SAMPLING_FREQ = N / T
@@ -176,8 +176,7 @@ class ShaperCalibrate:
         calibration_data = self.background_process_exec(
                 self.calc_freq_response, (data,))
         if calibration_data is None:
-            raise self.error(
-                    "Internal error processing accelerometer data %s" % (data,))
+            raise self.error(f"Internal error processing accelerometer data {data}")
         calibration_data.set_numpy(self.numpy)
         return calibration_data
 
@@ -214,7 +213,7 @@ class ShaperCalibrate:
         inv_D = 1. / sum(A)
         n = len(T)
         # Calculate input shaper shift
-        ts = sum([A[i] * T[i] for i in range(n)]) * inv_D
+        ts = sum(A[i] * T[i] for i in range(n)) * inv_D
 
         # Calculate offset for 90 and 180 degrees turn
         offset_90 = offset_180 = 0.
@@ -296,9 +295,10 @@ class ShaperCalibrate:
         # Just some empirically chosen value which produces good projections
         # for max_accel without much smoothing
         TARGET_SMOOTHING = 0.12
-        max_accel = self._bisect(lambda test_accel: self._get_shaper_smoothing(
-            shaper, test_accel) <= TARGET_SMOOTHING)
-        return max_accel
+        return self._bisect(
+            lambda test_accel: self._get_shaper_smoothing(shaper, test_accel)
+            <= TARGET_SMOOTHING
+        )
 
     def find_best_shaper(self, calibration_data, max_smoothing, logger=None):
         best_shaper = None
@@ -330,9 +330,8 @@ class ShaperCalibrate:
             self.save_params(configfile, 'x', shaper_name, shaper_freq)
             self.save_params(configfile, 'y', shaper_name, shaper_freq)
         else:
-            configfile.set('input_shaper', 'shaper_type_'+axis, shaper_name)
-            configfile.set('input_shaper', 'shaper_freq_'+axis,
-                           '%.1f' % (shaper_freq,))
+            configfile.set('input_shaper', f'shaper_type_{axis}', shaper_name)
+            configfile.set('input_shaper', f'shaper_freq_{axis}', '%.1f' % (shaper_freq,))
 
     def save_calibration_data(self, output, calibration_data, shapers=None):
         try:

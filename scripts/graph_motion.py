@@ -311,7 +311,7 @@ def get_3hump_ei_shaper():
 def shift_pulses(shaper):
     A, T, name = shaper
     n = len(T)
-    ts = (sum([A[i] * T[i] for i in range(n)])) / sum(A)
+    ts = sum(A[i] * T[i] for i in range(n)) / sum(A)
     for i in range(n):
         T[i] -= ts
 
@@ -323,7 +323,7 @@ def calc_shaper(shaper, positions):
     T = [time_to_index(-shaper[1][j]) for j in range(n)]
     out = [0.] * len(positions)
     for i in indexes(positions):
-        out[i] = sum([positions[i + T[j]] * A[j] for j in range(n)]) * inv_D
+        out[i] = sum(positions[i + T[j]] * A[j] for j in range(n)) * inv_D
     return out
 
 # Ideal values

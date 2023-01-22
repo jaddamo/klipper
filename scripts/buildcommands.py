@@ -81,8 +81,7 @@ class HandleEnumerations:
     def add_enumeration(self, enum, name, value):
         enums = self.enumerations.setdefault(enum, {})
         if name in enums and enums[name] != value:
-            error("Conflicting definition for enumeration '%s %s'" % (
-                enum, name))
+            error(f"Conflicting definition for enumeration '{enum} {name}'")
         enums[name] = value
     def decl_enumeration(self, req):
         enum, name, value = req.split()[1:]
@@ -99,10 +98,11 @@ class HandleEnumerations:
             self.add_enumeration("static_string_id", s, i + STATIC_STRING_MIN)
         data['enumerations'] = self.enumerations
     def generate_code(self, options):
-        code = []
-        for i, s in enumerate(self.static_strings):
-            code.append('    if (__builtin_strcmp(str, "%s") == 0)\n'
-                        '        return %d;\n' % (s, i + STATIC_STRING_MIN))
+        code = [
+            '    if (__builtin_strcmp(str, "%s") == 0)\n'
+            '        return %d;\n' % (s, i + STATIC_STRING_MIN)
+            for i, s in enumerate(self.static_strings)
+        ]
         fmt = """
 uint8_t __always_inline
 ctr_lookup_static_string(const char *str)
@@ -131,7 +131,7 @@ class HandleConstants:
         }
     def set_value(self, name, value):
         if name in self.constants and self.constants[name] != value:
-            error("Conflicting definition for constant '%s'" % name)
+            error(f"Conflicting definition for constant '{name}'")
         self.constants[name] = value
     def decl_constant(self, req):
         name, value = req.split()[1:]
@@ -183,7 +183,7 @@ class HandleInitialPins:
                 flag = "0"
                 p = p[1:].strip()
             if p not in pinmap:
-                error("Unknown initial pin '%s'" % (p,))
+                error(f"Unknown initial pin '{p}'")
             out.append("\n    {%d, %s}, // %s" % (pinmap[p], flag, p))
         return out
     def generate_code(self, options):
@@ -262,19 +262,19 @@ class HandleCommandGeneration:
     def decl_command(self, req):
         funcname, flags, msgname = req.split()[1:4]
         if msgname in self.commands:
-            error("Multiple definitions for command '%s'" % msgname)
+            error(f"Multiple definitions for command '{msgname}'")
         self.commands[msgname] = (funcname, flags, msgname)
         msg = req.split(None, 3)[3]
         m = self.messages_by_name.get(msgname)
         if m is not None and m != msg:
-            error("Conflicting definition for command '%s'" % msgname)
+            error(f"Conflicting definition for command '{msgname}'")
         self.messages_by_name[msgname] = msg
     def decl_encoder(self, req):
         msg = req.split(None, 1)[1]
         msgname = msg.split()[0]
         m = self.messages_by_name.get(msgname)
         if m is not None and m != msg:
-            error("Conflicting definition for message '%s'" % msgname)
+            error(f"Conflicting definition for message '{msgname}'")
         self.messages_by_name[msgname] = msg
         self.encoders.append((msgname, msg))
     def decl_output(self, req):
@@ -306,19 +306,21 @@ class HandleCommandGeneration:
                              if msgtag in command_tags }
         data['responses'] = { msg: msgtag for msg, msgtag in msg_to_tag.items()
                               if msgtag in response_tags }
-        output = {msg: msgtag for msg, msgtag in msg_to_tag.items()
-                  if msgtag not in command_tags and msgtag not in response_tags}
-        if output:
+        if output := {
+            msg: msgtag
+            for msg, msgtag in msg_to_tag.items()
+            if msgtag not in command_tags and msgtag not in response_tags
+        }:
             data['output'] = output
     def build_parser(self, msgid, msgformat, msgtype):
         if msgtype == "output":
             param_types = msgproto.lookup_output_params(msgformat)
-            comment = "Output: " + msgformat
+            comment = f"Output: {msgformat}"
         else:
             param_types = [t for name, t in msgproto.lookup_params(msgformat)]
             comment = msgformat
         params = '0'
-        types = tuple([t.__class__.__name__ for t in param_types])
+        types = tuple(t.__class__.__name__ for t in param_types)
         if types:
             paramid = self.all_param_types.get(types)
             if paramid is None:
@@ -336,9 +338,14 @@ class HandleCommandGeneration:
                         + types.count('PT_buffer'))
             out += "    .num_args=%d," % (num_args,)
         else:
-            max_size = min(msgproto.MESSAGE_MAX,
-                           (msgproto.MESSAGE_MIN + 1
-                            + sum([t.max_length for t in param_types])))
+            max_size = min(
+                msgproto.MESSAGE_MAX,
+                (
+                    msgproto.MESSAGE_MIN
+                    + 1
+                    + sum(t.max_length for t in param_types)
+                ),
+            )
             out += "    .max_size=%d," % (max_size,)
         return out
     def generate_responses_code(self):
@@ -402,8 +409,9 @@ ctr_lookup_output(const char *str)
             index.append(" {%s\n    .flags=%s,\n    .func=%s\n}," % (
                 parsercode, flags, funcname))
         index = "".join(index).strip()
-        externs = "\n".join(["extern void "+funcname+"(uint32_t*);"
-                             for funcname in sorted(externs)])
+        externs = "\n".join(
+            [f"extern void {funcname}(uint32_t*);" for funcname in sorted(externs)]
+        )
         fmt = """
 %s
 
@@ -418,11 +426,15 @@ const uint8_t command_index_size PROGMEM = ARRAY_SIZE(command_index);
         sorted_param_types = sorted(
             [(i, a) for a, i in self.all_param_types.items()])
         params = ['']
-        for paramid, argtypes in sorted_param_types:
-            params.append(
-                'static const uint8_t command_parameters%d[] PROGMEM = {\n'
-                '    %s };' % (
-                    paramid, ', '.join(argtypes),))
+        params.extend(
+            'static const uint8_t command_parameters%d[] PROGMEM = {\n'
+            '    %s };'
+            % (
+                paramid,
+                ', '.join(argtypes),
+            )
+            for paramid, argtypes in sorted_param_types
+        )
         params.append('')
         return "\n".join(params)
     def generate_code(self, options):
@@ -441,21 +453,21 @@ Handlers.append(HandleCommandGeneration())
 
 # Run program and return the specified output
 def check_output(prog):
-    logging.debug("Running %s" % (repr(prog),))
+    logging.debug(f"Running {repr(prog)}")
     try:
         process = subprocess.Popen(shlex.split(prog), stdout=subprocess.PIPE)
         output = process.communicate()[0]
         retcode = process.poll()
     except OSError:
-        logging.debug("Exception on run: %s" % (traceback.format_exc(),))
+        logging.debug(f"Exception on run: {traceback.format_exc()}")
         return ""
-    logging.debug("Got (code=%s): %s" % (retcode, repr(output)))
+    logging.debug(f"Got (code={retcode}): {repr(output)}")
     if retcode:
         return ""
     try:
         return str(output.decode('utf8'))
     except UnicodeError:
-        logging.debug("Exception on decode: %s" % (traceback.format_exc(),))
+        logging.debug(f"Exception on decode: {traceback.format_exc()}")
         return ""
 
 # Obtain version info from "git" program
@@ -464,7 +476,7 @@ def git_version():
         logging.debug("No '.git' file/directory found")
         return ""
     ver = check_output("git describe --always --tags --long --dirty").strip()
-    logging.debug("Got git version: %s" % (repr(ver),))
+    logging.debug(f"Got git version: {repr(ver)}")
     return ver
 
 def build_version(extra, cleanbuild):
@@ -477,7 +489,7 @@ def build_version(extra, cleanbuild):
     if not cleanbuild:
         btime = time.strftime("%Y%m%d_%H%M%S")
         hostname = socket.gethostname()
-        version = "%s-%s-%s" % (version, btime, hostname)
+        version = f"{version}-{btime}-{hostname}"
     return version + extra
 
 # Run "tool --version" for each specified tool and extract versions
@@ -487,7 +499,7 @@ def tool_versions(tools):
     success = 0
     for tool in tools:
         # Extract first line from "tool --version" output
-        verstr = check_output("%s --version" % (tool,)).split('\n')[0]
+        verstr = check_output(f"{tool} --version").split('\n')[0]
         # Check if this tool looks like a binutils program
         isbinutils = 0
         if verstr.startswith('GNU '):
@@ -501,14 +513,13 @@ def tool_versions(tools):
             continue
         # Check for any version conflicts
         if versions[isbinutils] and versions[isbinutils] != ver:
-            logging.debug("Mixed version %s vs %s" % (
-                repr(versions[isbinutils]), repr(ver)))
+            logging.debug(f"Mixed version {repr(versions[isbinutils])} vs {repr(ver)}")
             versions[isbinutils] = "mixed"
             continue
         versions[isbinutils] = ver
         success += 1
     cleanbuild = versions[0] and versions[1] and success == len(tools)
-    return cleanbuild, "gcc: %s binutils: %s" % (versions[0], versions[1])
+    return cleanbuild, f"gcc: {versions[0]} binutils: {versions[1]}"
 
 # Add version information to the data dictionary
 class HandleVersions:
@@ -547,10 +558,8 @@ class HandleIdentify:
 
         # Write data dictionary
         if options.write_dictionary:
-            f = open(options.write_dictionary, 'w')
-            f.write(datadict)
-            f.close()
-
+            with open(options.write_dictionary, 'w') as f:
+                f.write(datadict)
         # Format compressed info into C code
         zdatadict = bytearray(zlib.compress(datadict.encode(), 9))
         out = []
@@ -596,23 +605,21 @@ def main():
 
     # Parse request file
     ctr_dispatch = { k: v for h in Handlers for k, v in h.ctr_dispatch.items() }
-    f = open(incmdfile, 'r')
-    data = f.read()
-    f.close()
+    with open(incmdfile, 'r') as f:
+        data = f.read()
     for req in data.split('\n'):
         req = req.lstrip()
         if not req:
             continue
         cmd = req.split()[0]
         if cmd not in ctr_dispatch:
-            error("Unknown build time command '%s'" % cmd)
+            error(f"Unknown build time command '{cmd}'")
         ctr_dispatch[cmd](req)
 
     # Write output
     code = "".join([FILEHEADER] + [h.generate_code(options) for h in Handlers])
-    f = open(outcfile, 'w')
-    f.write(code)
-    f.close()
+    with open(outcfile, 'w') as f:
+        f.write(code)
 
 if __name__ == '__main__':
     main()

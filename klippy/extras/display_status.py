@@ -24,10 +24,8 @@ class DisplayStatus:
             if idle_timeout_info['state'] != "Printing":
                 self.progress = progress = None
         if progress is None:
-            progress = 0.
             sdcard = self.printer.lookup_object('virtual_sdcard', None)
-            if sdcard is not None:
-                progress = sdcard.get_status(eventtime)['progress']
+            progress = 0. if sdcard is None else sdcard.get_status(eventtime)['progress']
         return { 'progress': progress, 'message': self.message }
     def cmd_M73(self, gcmd):
         progress = gcmd.get_float('P', 0.) / 100.

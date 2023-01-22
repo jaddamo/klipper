@@ -28,8 +28,7 @@ class PrinterTemperatureMCU:
                 self.adc2 = config.getfloat('sensor_adc2', minval=0., maxval=1.)
         # Setup ADC port
         ppins = config.get_printer().lookup_object('pins')
-        self.mcu_adc = ppins.setup_pin('adc',
-                                       '%s:ADC_TEMPERATURE' % (mcu_name,))
+        self.mcu_adc = ppins.setup_pin('adc', f'{mcu_name}:ADC_TEMPERATURE')
         self.mcu_adc.setup_adc_callback(REPORT_TIME, self.adc_callback)
         query_adc = config.get_printer().load_object(config, 'query_adc')
         query_adc.register_adc(config.get_name(), self.mcu_adc)
@@ -89,8 +88,9 @@ class PrinterTemperatureMCU:
                                   minval=min(adc_range), maxval=max(adc_range),
                                   range_check_count=RANGE_CHECK_COUNT)
     def config_unknown(self):
-        raise self.printer.config_error("MCU temperature not supported on %s"
-                                        % (self.mcu_type,))
+        raise self.printer.config_error(
+            f"MCU temperature not supported on {self.mcu_type}"
+        )
     def config_rp2040(self):
         self.slope = 3.3 / -0.001721
         self.base_temperature = self.calc_base(27., 0.706 / 3.3)

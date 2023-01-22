@@ -34,9 +34,7 @@ class DelayedGcode:
             self.gcode.run_script(self.timer_gcode.render())
         except Exception:
             logging.exception("Script running error")
-        nextwake = self.reactor.NEVER
-        if self.repeat:
-            nextwake = eventtime + self.duration
+        nextwake = eventtime + self.duration if self.repeat else self.reactor.NEVER
         self.inside_timer = self.repeat = False
         return nextwake
     cmd_UPDATE_DELAYED_GCODE_help = "Update the duration of a delayed_gcode"

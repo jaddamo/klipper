@@ -56,14 +56,12 @@ class SerialTxPin(pysimulavr.PySimulationMember, pysimulavr.Pin):
     def DoStep(self, trueHwStep):
         if not self.pos:
             if not self.queue:
-                data = self.terminal.read()
-                if not data:
+                if data := self.terminal.read():
+                    self.queue.extend(data)
+                else:
                     return self.delay * 100
-                self.queue.extend(data)
             self.current = (self.queue.pop(0) << 1) | 0x200
-        newstate = 'L'
-        if self.current & (1 << self.pos):
-            newstate = 'H'
+        newstate = 'H' if self.current & (1 << self.pos) else 'L'
         self.SetPin(newstate)
         self.pos += 1
         if self.pos >= SERIALBITS:
@@ -90,7 +88,7 @@ class Tracing:
             return
         if self.signals.strip() == '?':
             self.show_help()
-        sigs = "\n".join(["+ " + s for s in self.signals.split(',')])
+        sigs = "\n".join([f"+ {s}" for s in self.signals.split(',')])
         self.dman.addDumpVCD(self.filename, sigs, "ns", False, False)
     def start(self):
         if self.dman is not None:
@@ -180,7 +178,7 @@ def main():
     opts.add_option("-p", "--port", type="string", dest="port",
                     default="/tmp/pseudoserial",
                     help="pseudo-tty device to create for serial port")
-    deffile = os.path.splitext(os.path.basename(sys.argv[0]))[0] + ".vcd"
+    deffile = f"{os.path.splitext(os.path.basename(sys.argv[0]))[0]}.vcd"
     opts.add_option("-f", "--tracefile", type="string", dest="tracefile",
                     default=deffile, help="filename to write signal trace to")
     options, args = opts.parse_args()

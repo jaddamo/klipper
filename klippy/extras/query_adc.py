@@ -17,8 +17,8 @@ class QueryADC:
     def cmd_QUERY_ADC(self, gcmd):
         name = gcmd.get('NAME', None)
         if name not in self.adc:
-            objs = ['"%s"' % (n,) for n in sorted(self.adc.keys())]
-            msg = "Available ADC objects: %s" % (', '.join(objs),)
+            objs = [f'"{n}"' for n in sorted(self.adc.keys())]
+            msg = f"Available ADC objects: {', '.join(objs)}"
             gcmd.respond_info(msg)
             return
         value, timestamp = self.adc[name].get_last_value()

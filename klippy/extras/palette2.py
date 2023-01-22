@@ -89,10 +89,10 @@ class Palette2:
 
         # Omega code matchers
         self.omega_header = [None] * 9
-        omega_handlers = ["O" + str(i) for i in range(33)]
+        omega_handlers = [f"O{str(i)}" for i in range(33)]
         for cmd in omega_handlers:
-            func = getattr(self, 'cmd_' + cmd, None)
-            desc = getattr(self, 'cmd_' + cmd + '_help', None)
+            func = getattr(self, f'cmd_{cmd}', None)
+            desc = getattr(self, f'cmd_{cmd}_help', None)
             if func:
                 self.gcode.register_command(cmd, func, desc=desc)
             else:
@@ -146,8 +146,9 @@ class Palette2:
             return
 
         self.signal_disconnect = False
-        logging.info("Connecting to Palette 2 on port (%s) at (%s)" %
-                     (self.serial_port, self.baud))
+        logging.info(
+            f"Connecting to Palette 2 on port ({self.serial_port}) at ({self.baud})"
+        )
         try:
             self.serial = serial.Serial(
                 self.serial_port, self.baud, timeout=0, write_timeout=0)
@@ -214,16 +215,18 @@ class Palette2:
             self.p2cmd_O102(params=None)
 
     def cmd_OmegaDefault(self, gcmd):
-        logging.debug("Omega Code: %s" % (gcmd.get_command()))
+        logging.debug(f"Omega Code: {gcmd.get_command()}")
         if self._check_P2(gcmd):
             self.write_queue.put(gcmd.get_commandline())
 
     def _wait_for_heartbeat(self):
         startTs = self.reactor.monotonic()
         currTs = startTs
-        while self.heartbeat is None and self.heartbeat < (
-                currTs - SETUP_TIMEOUT) and startTs > (
-                currTs - SETUP_TIMEOUT):
+        while (
+            self.heartbeat is None
+            and self.heartbeat < (currTs - SETUP_TIMEOUT)
+            and currTs > currTs - SETUP_TIMEOUT
+        ):
             currTs = self.reactor.pause(currTs + 1.)
 
         if self.heartbeat < (currTs - SETUP_TIMEOUT):
@@ -256,48 +259,48 @@ class Palette2:
         self.is_printing = False
 
     def cmd_O21(self, gcmd):
-        logging.debug("Omega version: %s" % (gcmd.get_commandline()))
+        logging.debug(f"Omega version: {gcmd.get_commandline()}")
         self._reset()
         self.omega_header[0] = gcmd.get_commandline()
         self.is_printing = True
 
     def cmd_O22(self, gcmd):
-        logging.debug("Omega printer profile: %s" % (gcmd.get_commandline()))
+        logging.debug(f"Omega printer profile: {gcmd.get_commandline()}")
         self.omega_header[1] = gcmd.get_commandline()
 
     def cmd_O23(self, gcmd):
-        logging.debug("Omega slicer profile: %s" % (gcmd.get_commandline()))
+        logging.debug(f"Omega slicer profile: {gcmd.get_commandline()}")
         self.omega_header[2] = gcmd.get_commandline()
 
     def cmd_O24(self, gcmd):
-        logging.debug("Omega PPM: %s" % (gcmd.get_commandline()))
+        logging.debug(f"Omega PPM: {gcmd.get_commandline()}")
         self.omega_header[3] = gcmd.get_commandline()
 
     def cmd_O25(self, gcmd):
-        logging.debug("Omega inputs: %s" % (gcmd.get_commandline()))
+        logging.debug(f"Omega inputs: {gcmd.get_commandline()}")
         self.omega_header[4] = gcmd.get_commandline()
         drives = self.omega_header[4][4:].split()
         for idx in range(len(drives)):
             state = drives[idx][:2]
             if state == "D1":
-                drives[idx] = "U" + str(60 + idx)
+                drives[idx] = f"U{str(60 + idx)}"
         self.omega_drives = [d for d in drives if d != "D0"]
-        logging.info("Omega drives: %s" % self.omega_drives)
+        logging.info(f"Omega drives: {self.omega_drives}")
 
     def cmd_O26(self, gcmd):
-        logging.debug("Omega splices %s" % (gcmd.get_commandline()))
+        logging.debug(f"Omega splices {gcmd.get_commandline()}")
         self.omega_header[5] = gcmd.get_commandline()
 
     def cmd_O27(self, gcmd):
-        logging.debug("Omega pings: %s" % (gcmd.get_commandline()))
+        logging.debug(f"Omega pings: {gcmd.get_commandline()}")
         self.omega_header[6] = gcmd.get_commandline()
 
     def cmd_O28(self, gcmd):
-        logging.debug("Omega MSF NA: %s" % (gcmd.get_commandline()))
+        logging.debug(f"Omega MSF NA: {gcmd.get_commandline()}")
         self.omega_header[7] = gcmd.get_commandline()
 
     def cmd_O29(self, gcmd):
-        logging.debug("Omega MSF NH: %s" % (gcmd.get_commandline()))
+        logging.debug(f"Omega MSF NH: {gcmd.get_commandline()}")
         self.omega_header[8] = gcmd.get_commandline()
 
     def cmd_O30(self, gcmd):
@@ -311,20 +314,20 @@ class Palette2:
             self.omega_splices.append((int(param_drive), param_distance))
         except ValueError:
             gcmd.respond_info("Incorrectly formatted splice command")
-        logging.debug("Omega splice command drive %s distance %s" %
-                      (param_drive, param_distance))
+        logging.debug(
+            f"Omega splice command drive {param_drive} distance {param_distance}"
+        )
 
     def cmd_O31(self, gcmd):
         if self._check_P2(gcmd):
             self.omega_current_ping = gcmd.get_commandline()
-            logging.debug("Omega ping command: %s" %
-                          (gcmd.get_commandline()))
+            logging.debug(f"Omega ping command: {gcmd.get_commandline()}")
 
             self.write_queue.put(COMMAND_PING)
             self.gcode.create_gcode_command("G4", "G4", {"P": "10"})
 
     def cmd_O32(self, gcmd):
-        logging.debug("Omega algorithm: %s" % (gcmd.get_commandline()))
+        logging.debug(f"Omega algorithm: {gcmd.get_commandline()}")
         self.omega_algorithms.append(gcmd.get_commandline())
 
     def p2cmd_O20(self, params):
@@ -343,21 +346,19 @@ class Palette2:
             return
 
         if n == 0:
-            logging.info("Sending omega header %s" % self.omega_header_counter)
+            logging.info(f"Sending omega header {self.omega_header_counter}")
             self.write_queue.put(self.omega_header[self.omega_header_counter])
             self.omega_header_counter = self.omega_header_counter + 1
         elif n == 1:
-            logging.info("Sending splice info %s" % self.omega_splices_counter)
+            logging.info(f"Sending splice info {self.omega_splices_counter}")
             splice = self.omega_splices[self.omega_splices_counter]
             self.write_queue.put("O30 D%d D%s" % (splice[0], splice[1]))
             self.omega_splices_counter = self.omega_splices_counter + 1
         elif n == 2:
-            logging.info("Sending current ping info %s" %
-                         self.omega_current_ping)
+            logging.info(f"Sending current ping info {self.omega_current_ping}")
             self.write_queue.put(self.omega_current_ping)
         elif n == 4:
-            logging.info("Sending algorithm info %s" %
-                         self.omega_algorithms_counter)
+            logging.info(f"Sending algorithm info {self.omega_algorithms_counter}")
             self.write_queue.put(
                 self.omega_algorithms[self.omega_algorithms_counter])
             self.omega_algorithms_counter = self.omega_algorithms_counter + 1
@@ -400,8 +401,7 @@ class Palette2:
         if len(params) > 1:
             try:
                 fw = params[0][1:]
-                logging.info(
-                    "Palette 2 firmware version %s detected" % os.fwalk)
+                logging.info(f"Palette 2 firmware version {os.fwalk} detected")
             except (TypeError, IndexError):
                 logging.error("Unable to parse firmware version")
 
@@ -416,7 +416,7 @@ class Palette2:
                     size) in self.virtual_sdcard.get_file_list(
                     check_subdirs=True) if ".mcf.gcode" in file]
             for file in self.files:
-                self.write_queue.put("%s D%s" % (COMMAND_FILENAME, file))
+                self.write_queue.put(f"{COMMAND_FILENAME} D{file}")
             self.write_queue.put(COMMAND_FILENAMES_DONE)
 
     def p2cmd_O53(self, params):
@@ -424,7 +424,7 @@ class Palette2:
             try:
                 idx = int(params[1][1:], 16)
                 file = self.files[::-1][idx]
-                self.gcode.run_script("SDCARD_PRINT_FILE FILENAME=%s" % file)
+                self.gcode.run_script(f"SDCARD_PRINT_FILE FILENAME={file}")
             except (TypeError, IndexError):
                 logging.error("O53 has invalid command parameters")
 
@@ -474,7 +474,7 @@ class Palette2:
 
         matchers = []
         if self.is_printing:
-            matchers = matchers + [
+            matchers += [
                 [printCancelling, 2, "U0", "D2"],
                 [printCancelled, 2, "U0", "D3"],
                 [loadingOffset, 2, "U39"],
@@ -509,12 +509,12 @@ class Palette2:
         params = t[1:]
         params_count = len(params)
         if params_count:
-            res = [i for i in params if i[0] == "D" or i[0] == "U"]
+            res = [i for i in params if i[0] in ["D", "U"]]
             if not all(res):
                 logging.error("Omega parameters are invalid")
                 return
 
-        func = getattr(self, 'p2cmd_' + ocode, None)
+        func = getattr(self, f'p2cmd_{ocode}', None)
         if func is not None:
             func(params)
 
@@ -523,8 +523,7 @@ class Palette2:
         for matcher in matchers:
             if len(params) >= matcher[1]:
                 match_params = matcher[2:]
-                res = all([match_params[i] == params[i]
-                           for i in range(len(match_params))])
+                res = all(match_params[i] == params[i] for i in range(len(match_params)))
                 if res:
                     matcher[0](params)
                     return True
@@ -543,20 +542,18 @@ class Palette2:
                 logging.error("Unable to communicate with the Palette 2")
                 self.cmd_Disconnect()
                 return self.reactor.NEVER
-            if len(raw_bytes):
-                text_buffer = self.read_buffer + str(raw_bytes.decode())
-                while True:
-                    i = text_buffer.find("\n")
-                    if i >= 0:
-                        line = text_buffer[0:i+1]
-                        self.read_queue.put(line.strip())
-                        text_buffer = text_buffer[i+1:]
-                    else:
-                        break
-                self.read_buffer = text_buffer
-            else:
+            if not len(raw_bytes):
                 break
 
+            text_buffer = self.read_buffer + str(raw_bytes.decode())
+            while True:
+                i = text_buffer.find("\n")
+                if i < 0:
+                    break
+                line = text_buffer[:i+1]
+                self.read_queue.put(line.strip())
+                text_buffer = text_buffer[i+1:]
+            self.read_buffer = text_buffer
         # Process any decoded lines from the device
         while not self.read_queue.empty():
             try:
@@ -565,7 +562,7 @@ class Palette2:
                 pass
 
             heartbeat_strings = [COMMAND_HEARTBEAT, "Connection Okay"]
-            if not any(x in text_line for x in heartbeat_strings):
+            if all(x not in text_line for x in heartbeat_strings):
                 logging.debug("%0.3f P2 -> : %s" %(eventtime, text_line))
 
             # Received a heartbeat from the device
@@ -600,9 +597,7 @@ class Palette2:
                 self.omega_last_command = text_line
                 l = text_line.strip()
                 if COMMAND_HEARTBEAT not in l:
-                    logging.debug(
-                        "%s -> P2 : %s" %
-                        (self.reactor.monotonic(), l))
+                    logging.debug(f"{self.reactor.monotonic()} -> P2 : {l}")
                 terminated_line = "%s\n" % (l)
                 try:
                     self.serial.write(terminated_line.encode())
@@ -613,28 +608,28 @@ class Palette2:
         return eventtime + SERIAL_TIMER
 
     def _run_Smart_Load(self, eventtime):
-        if not self.is_splicing and self.remaining_load_length < 0:
-            # Make sure toolhead class isn't busy
-            toolhead = self.printer.lookup_object("toolhead")
-            print_time, est_print_time, lookahead_empty = toolhead.check_busy(
-                eventtime)
-            idle_time = est_print_time - print_time
-            if not lookahead_empty or idle_time < 0.5:
-                return eventtime + \
+        if self.is_splicing or self.remaining_load_length >= 0:
+            return eventtime + AUTOLOAD_TIMER
+        # Make sure toolhead class isn't busy
+        toolhead = self.printer.lookup_object("toolhead")
+        print_time, est_print_time, lookahead_empty = toolhead.check_busy(
+            eventtime)
+        idle_time = est_print_time - print_time
+        if not lookahead_empty or idle_time < 0.5:
+            return eventtime + \
                     max(0., min(1., print_time - est_print_time))
 
-            extrude = abs(self.remaining_load_length)
-            extrude = min(50, extrude / 2)
-            if extrude <= 10:
-                extrude = 1
-            logging.info("Smart loading %dmm filament with %dmm remaining" % (
-                extrude, abs(self.remaining_load_length)))
+        extrude = abs(self.remaining_load_length)
+        extrude = min(50, extrude / 2)
+        if extrude <= 10:
+            extrude = 1
+        logging.info("Smart loading %dmm filament with %dmm remaining" % (
+            extrude, abs(self.remaining_load_length)))
 
-            self.gcode.run_script("G92 E0")
-            self.gcode.run_script("G1 E%d F%d" % (
-                extrude, self.auto_load_speed * 60))
-            return self.reactor.NOW
-        return eventtime + AUTOLOAD_TIMER
+        self.gcode.run_script("G92 E0")
+        self.gcode.run_script("G1 E%d F%d" % (
+            extrude, self.auto_load_speed * 60))
+        return self.reactor.NOW
 
     def get_status(self, eventtime=None):
         status = {

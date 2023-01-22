@@ -108,7 +108,7 @@ class MCU_ADC_buttons:
         self.mcu_adc.setup_minmax(ADC_SAMPLE_TIME, ADC_SAMPLE_COUNT)
         self.mcu_adc.setup_adc_callback(ADC_REPORT_TIME, self.adc_callback)
         query_adc = printer.lookup_object('query_adc')
-        query_adc.register_adc('adc_button:' + pin.strip(), self.mcu_adc)
+        query_adc.register_adc(f'adc_button:{pin.strip()}', self.mcu_adc)
 
     def setup_button(self, min_value, max_value, callback):
         self.min_value = min(self.min_value, min_value)

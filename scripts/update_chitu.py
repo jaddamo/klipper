@@ -35,7 +35,7 @@ def xor_block(r0, r1, block_number, block_size, file_key):
     #load the xor key from the file
     r7 =  file_key
 
-    for loop_counter in range(0, block_size):
+    for loop_counter in range(block_size):
         # meant to make sure different bits of the key are used.
         xor_seed = int(loop_counter/key_length)
 
@@ -46,7 +46,7 @@ def xor_block(r0, r1, block_number, block_size, file_key):
         xor_seed = (loop_counter * loop_counter) + block_number
 
         # shift the xor_seed left by the bits in IP.
-        xor_seed = xor_seed >> ip
+        xor_seed >>= ip
 
         # load a byte into IP
         ip = r0[loop_counter]
@@ -72,7 +72,7 @@ def encode_file(input, output_file, file_length):
     file_digest = hashlib.md5(input_file).digest()
     uid_value = uuid.UUID(bytes=file_digest)
     print("Update UUID ", uid_value)
-    file_key = int(uid_value.hex[0:8], 16)
+    file_key = int(uid_value.hex[:8], 16)
 
     xor_crc = 0xef3d4323;
 
@@ -89,14 +89,14 @@ def encode_file(input, output_file, file_length):
     output_file.write(struct.pack("<I", file_key))
 
     #TODO - how to enforce that the firmware aligns to block boundaries?
-    block_count = int(len(input_file) / block_size)
+    block_count = len(input_file) // block_size
     print("Block Count is ", block_count)
-    for block_number in range(0, block_count):
+    for block_number in range(block_count):
         block_offset = (block_number * block_size)
         block_end = block_offset + block_size
         block_array = bytearray(input_file[block_offset: block_end])
         xor_block(block_array, block_array, block_number, block_size, file_key)
-        for n in range (0, block_size):
+        for n in range(block_size):
             input_file[block_offset + n] = block_array[n]
 
         # update the expected CRC value.
@@ -121,13 +121,12 @@ def main():
         print("Firmware file", fw, "does not exist")
         exit(1)
 
-    firmware = open(fw, "rb")
-    update = open(output, "wb")
-    length = os.path.getsize(fw)
+    with open(fw, "rb") as firmware:
+        update = open(output, "wb")
+        length = os.path.getsize(fw)
 
-    encode_file(firmware, update, length)
+        encode_file(firmware, update, length)
 
-    firmware.close()
     update.close()
 
     print("Encoding complete.")

@@ -11,8 +11,7 @@ class mcp4728:
         scale = config.getfloat('scale', 1., above=0.)
         # Configure registers
         for i, name in enumerate('abcd'):
-            val = config.getfloat('channel_%s' % (name,), None,
-                                  minval=0., maxval=scale)
+            val = config.getfloat(f'channel_{name}', None, minval=0., maxval=scale)
             if val is not None:
                 self.set_dac(i, int(val * 4095. / scale + .5))
     def set_dac(self, dac, value):

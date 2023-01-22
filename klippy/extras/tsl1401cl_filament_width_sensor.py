@@ -95,25 +95,22 @@ class FilamentWidthSensor:
                         and (filament_width >= self.min_diameter)):
                         percentage = round(self.nominal_filament_dia**2
                                            / filament_width**2 * 100)
-                        self.gcode.run_script("M221 S" + str(percentage))
+                        self.gcode.run_script(f"M221 S{str(percentage)}")
                     else:
                         self.gcode.run_script("M221 S100")
         else:
             self.gcode.run_script("M221 S100")
             self.filament_array = []
 
-        if self.is_active:
-            return eventtime + 1
-        else:
-            return self.reactor.NEVER
+        return eventtime + 1 if self.is_active else self.reactor.NEVER
 
     def cmd_M407(self, gcmd):
         response = ""
-        if self.lastFilamentWidthReading > 0:
-            response += ("Filament dia (measured mm): "
-                         + str(self.lastFilamentWidthReading))
-        else:
-            response += "Filament NOT present"
+        response += (
+            f"Filament dia (measured mm): {str(self.lastFilamentWidthReading)}"
+            if self.lastFilamentWidthReading > 0
+            else "Filament NOT present"
+        )
         gcmd.respond_info(response)
 
     def cmd_ClearFilamentArray(self, gcmd):

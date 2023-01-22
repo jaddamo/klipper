@@ -169,7 +169,7 @@ class BLTouchEndstopWrapper:
             msg = "BLTouch failed to verify sensor state"
             if retry >= 2:
                 raise self.printer.command_error(msg)
-            self.gcode.respond_info(msg + '; retrying.')
+            self.gcode.respond_info(f'{msg}; retrying.')
             self.send_cmd('reset', duration=RETRY_RESET_TIME)
     def multi_probe_begin(self):
         if self.stow_on_each_sample:
@@ -184,10 +184,10 @@ class BLTouchEndstopWrapper:
         self.sync_print_time()
         self.multi = 'OFF'
     def probe_prepare(self, hmove):
-        if self.multi == 'OFF' or self.multi == 'FIRST':
+        if self.multi in ['OFF', 'FIRST']:
             self.lower_probe()
-            if self.multi == 'FIRST':
-                self.multi = 'ON'
+        if self.multi == 'FIRST':
+            self.multi = 'ON'
         self.sync_print_time()
     def home_start(self, print_time, sample_time, sample_count, rest_time,
                    triggered=True):
@@ -252,10 +252,11 @@ class BLTouchEndstopWrapper:
     def cmd_BLTOUCH_DEBUG(self, gcmd):
         cmd = gcmd.get('COMMAND', None)
         if cmd is None or cmd not in Commands:
-            gcmd.respond_info("BLTouch commands: %s" % (
-                ", ".join(sorted([c for c in Commands if c is not None]))))
+            gcmd.respond_info(
+                f'BLTouch commands: {", ".join(sorted([c for c in Commands if c is not None]))}'
+            )
             return
-        gcmd.respond_info("Sending BLTOUCH_DEBUG COMMAND=%s" % (cmd,))
+        gcmd.respond_info(f"Sending BLTOUCH_DEBUG COMMAND={cmd}")
         self.sync_print_time()
         self.send_cmd(cmd, duration=self.pin_move_time)
         self.sync_print_time()
@@ -265,7 +266,7 @@ class BLTouchEndstopWrapper:
         if cmd is None or cmd not in ['5V', 'OD']:
             gcmd.respond_info("BLTouch output modes: 5V, OD")
             return
-        gcmd.respond_info("Storing BLTouch output mode: %s" % (cmd,))
+        gcmd.respond_info(f"Storing BLTouch output mode: {cmd}")
         self.sync_print_time()
         self.store_output_mode(cmd)
         self.sync_print_time()

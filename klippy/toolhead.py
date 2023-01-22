@@ -21,16 +21,14 @@ class Move:
         velocity = min(speed, toolhead.max_velocity)
         self.is_kinematic_move = True
         self.axes_d = axes_d = [end_pos[i] - start_pos[i] for i in (0, 1, 2, 3)]
-        self.move_d = move_d = math.sqrt(sum([d*d for d in axes_d[:3]]))
+        self.move_d = move_d = math.sqrt(sum(d*d for d in axes_d[:3]))
         if move_d < .000000001:
             # Extrude only move
             self.end_pos = (start_pos[0], start_pos[1], start_pos[2],
                             end_pos[3])
             axes_d[0] = axes_d[1] = axes_d[2] = 0.
             self.move_d = move_d = abs(axes_d[3])
-            inv_move_d = 0.
-            if move_d:
-                inv_move_d = 1. / move_d
+            inv_move_d = 1. / move_d if move_d else 0.
             self.accel = 99999999.9
             velocity = speed
             self.is_kinematic_move = False
@@ -120,9 +118,7 @@ class MoveQueue:
     def set_flush_time(self, flush_time):
         self.junction_flush = flush_time
     def get_last(self):
-        if self.queue:
-            return self.queue[-1]
-        return None
+        return self.queue[-1] if self.queue else None
     def flush(self, lazy=False):
         self.junction_flush = LOOKAHEAD_FLUSH_TIME
         update_flush_count = lazy
@@ -150,15 +146,15 @@ class MoveQueue:
                         update_flush_count = False
                     peak_cruise_v2 = min(move.max_cruise_v2, (
                         smoothed_v2 + reachable_smoothed_v2) * .5)
-                    if delayed:
-                        # Propagate peak_cruise_v2 to any delayed moves
-                        if not update_flush_count and i < flush_count:
-                            mc_v2 = peak_cruise_v2
-                            for m, ms_v2, me_v2 in reversed(delayed):
-                                mc_v2 = min(mc_v2, ms_v2)
-                                m.set_junction(min(ms_v2, mc_v2), mc_v2
-                                               , min(me_v2, mc_v2))
-                        del delayed[:]
+                if delayed:
+                    # Propagate peak_cruise_v2 to any delayed moves
+                    if not update_flush_count and i < flush_count:
+                        mc_v2 = peak_cruise_v2
+                        for m, ms_v2, me_v2 in reversed(delayed):
+                            mc_v2 = min(mc_v2, ms_v2)
+                            m.set_junction(min(ms_v2, mc_v2), mc_v2
+                                           , min(me_v2, mc_v2))
+                    del delayed[:]
                 if not update_flush_count and i < flush_count:
                     cruise_v2 = min((start_v2 + reachable_start_v2) * .5
                                     , move.max_cruise_v2, peak_cruise_v2)
@@ -252,14 +248,14 @@ class ToolHead:
         self.extruder = kinematics.extruder.DummyExtruder(self.printer)
         kin_name = config.get('kinematics')
         try:
-            mod = importlib.import_module('kinematics.' + kin_name)
+            mod = importlib.import_module(f'kinematics.{kin_name}')
             self.kin = mod.load_kinematics(self, config)
         except config.error as e:
             raise
         except self.printer.lookup_object('pins').error as e:
             raise
         except:
-            msg = "Error loading kinematics '%s'" % (kin_name,)
+            msg = f"Error loading kinematics '{kin_name}'"
             logging.exception(msg)
             raise config.error(msg)
         # Register commands
@@ -433,10 +429,10 @@ class ToolHead:
     def wait_moves(self):
         self._flush_lookahead()
         eventtime = self.reactor.monotonic()
-        while (not self.special_queuing_state
-               or self.print_time >= self.mcu.estimated_print_time(eventtime)):
-            if not self.can_pause:
-                break
+        while (
+            not self.special_queuing_state
+            or self.print_time >= self.mcu.estimated_print_time(eventtime)
+        ) and self.can_pause:
             eventtime = self.reactor.pause(eventtime + 0.100)
     def set_extruder(self, extruder, extrude_pos):
         self.extruder = extruder
@@ -499,17 +495,17 @@ class ToolHead:
     def get_status(self, eventtime):
         print_time = self.print_time
         estimated_print_time = self.mcu.estimated_print_time(eventtime)
-        res = dict(self.kin.get_status(eventtime))
-        res.update({ 'print_time': print_time,
-                     'stalls': self.print_stall,
-                     'estimated_print_time': estimated_print_time,
-                     'extruder': self.extruder.get_name(),
-                     'position': self.Coord(*self.commanded_pos),
-                     'max_velocity': self.max_velocity,
-                     'max_accel': self.max_accel,
-                     'max_accel_to_decel': self.requested_accel_to_decel,
-                     'square_corner_velocity': self.square_corner_velocity})
-        return res
+        return dict(self.kin.get_status(eventtime)) | {
+            'print_time': print_time,
+            'stalls': self.print_stall,
+            'estimated_print_time': estimated_print_time,
+            'extruder': self.extruder.get_name(),
+            'position': self.Coord(*self.commanded_pos),
+            'max_velocity': self.max_velocity,
+            'max_accel': self.max_accel,
+            'max_accel_to_decel': self.requested_accel_to_decel,
+            'square_corner_velocity': self.square_corner_velocity,
+        }
     def _handle_shutdown(self):
         self.can_pause = False
         self.move_queue.reset()
@@ -574,7 +570,7 @@ class ToolHead:
                    self.max_velocity, self.max_accel,
                    self.requested_accel_to_decel,
                    self.square_corner_velocity))
-        self.printer.set_rollover_info("toolhead", "toolhead: %s" % (msg,))
+        self.printer.set_rollover_info("toolhead", f"toolhead: {msg}")
         if (max_velocity is None and
             max_accel is None and
             square_corner_velocity is None and
@@ -588,8 +584,7 @@ class ToolHead:
             p = gcmd.get_float('P', None, above=0.)
             t = gcmd.get_float('T', None, above=0.)
             if p is None or t is None:
-                gcmd.respond_info('Invalid M204 command "%s"'
-                                  % (gcmd.get_commandline(),))
+                gcmd.respond_info(f'Invalid M204 command "{gcmd.get_commandline()}"')
                 return
             accel = min(p, t)
         self.max_accel = accel

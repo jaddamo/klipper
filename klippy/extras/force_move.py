@@ -53,7 +53,7 @@ class ForceMove:
         self.steppers[mcu_stepper.get_name()] = mcu_stepper
     def lookup_stepper(self, name):
         if name not in self.steppers:
-            raise self.printer.config_error("Unknown stepper %s" % (name,))
+            raise self.printer.config_error(f"Unknown stepper {name}")
         return self.steppers[name]
     def _force_enable(self, stepper):
         toolhead = self.printer.lookup_object('toolhead')
@@ -94,7 +94,7 @@ class ForceMove:
     def _lookup_stepper(self, gcmd):
         name = gcmd.get('STEPPER')
         if name not in self.steppers:
-            raise gcmd.error("Unknown stepper %s" % (name,))
+            raise gcmd.error(f"Unknown stepper {name}")
         return self.steppers[name]
     cmd_STEPPER_BUZZ_help = "Oscillate a given stepper to help id it"
     def cmd_STEPPER_BUZZ(self, gcmd):
@@ -105,7 +105,7 @@ class ForceMove:
         dist, speed = BUZZ_DISTANCE, BUZZ_VELOCITY
         if stepper.units_in_radians():
             dist, speed = BUZZ_RADIANS_DISTANCE, BUZZ_RADIANS_VELOCITY
-        for i in range(10):
+        for _ in range(10):
             self.manual_move(stepper, dist, speed)
             toolhead.dwell(.050)
             self.manual_move(stepper, -dist, speed)

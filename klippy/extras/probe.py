@@ -134,8 +134,7 @@ class PrinterProbe:
         self.printer.lookup_object('toolhead').manual_move(coord, speed)
     def _calc_mean(self, positions):
         count = float(len(positions))
-        return [sum([pos[i] for pos in positions]) / count
-                for i in range(3)]
+        return [sum(pos[i] for pos in positions) / count for i in range(3)]
     def _calc_median(self, positions):
         z_sorted = sorted(positions, key=(lambda p: p[2]))
         middle = len(positions) // 2
@@ -193,7 +192,7 @@ class PrinterProbe:
         print_time = toolhead.get_last_move_time()
         res = self.mcu_probe.query_endstop(print_time)
         self.last_state = res
-        gcmd.respond_info("probe: %s" % (["open", "TRIGGERED"][not not res],))
+        gcmd.respond_info(f'probe: {["open", "TRIGGERED"][not not res]}')
     def get_status(self, eventtime):
         return {'last_query': self.last_state,
                 'last_z_result': self.last_z_result}
@@ -224,15 +223,12 @@ class PrinterProbe:
             self._move(liftpos, lift_speed)
         self.multi_probe_end()
         # Calculate maximum, minimum and average values
-        max_value = max([p[2] for p in positions])
-        min_value = min([p[2] for p in positions])
+        max_value = max(p[2] for p in positions)
+        min_value = min(p[2] for p in positions)
         range_value = max_value - min_value
         avg_value = self._calc_mean(positions)[2]
         median = self._calc_median(positions)[2]
-        # calculate the standard deviation
-        deviation_sum = 0
-        for i in range(len(positions)):
-            deviation_sum += pow(positions[i][2] - avg_value, 2.)
+        deviation_sum = sum(pow(position[2] - avg_value, 2.) for position in positions)
         sigma = (deviation_sum / len(positions)) ** 0.5
         # Show information
         gcmd.respond_info(
@@ -339,10 +335,10 @@ class ProbeEndstopWrapper:
         self.raise_probe()
         self.multi = 'OFF'
     def probe_prepare(self, hmove):
-        if self.multi == 'OFF' or self.multi == 'FIRST':
+        if self.multi in ['OFF', 'FIRST']:
             self.lower_probe()
-            if self.multi == 'FIRST':
-                self.multi = 'ON'
+        if self.multi == 'FIRST':
+            self.multi = 'ON'
     def probe_finish(self, hmove):
         if self.multi == 'OFF':
             self.raise_probe()
@@ -382,11 +378,7 @@ class ProbePointsHelper:
         return self.lift_speed
     def _move_next(self):
         toolhead = self.printer.lookup_object('toolhead')
-        # Lift toolhead
-        speed = self.lift_speed
-        if not self.results:
-            # Use full speed to first probe position
-            speed = self.speed
+        speed = self.lift_speed if self.results else self.speed
         toolhead.manual_move([None, None, self.horizontal_move_z], speed)
         # Check if done probing
         if len(self.results) >= len(self.probe_points):

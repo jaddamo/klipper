@@ -48,8 +48,7 @@ class TuningTower:
         self.last_z = -99999999.9
         self.last_command_value = None
         self.get_position()
-        message_parts = []
-        message_parts.append("start=%.6f" % (self.start,))
+        message_parts = ["start=%.6f" % (self.start,)]
         if self.factor:
             message_parts.append("factor=%.6f" % (self.factor,))
             if self.band:

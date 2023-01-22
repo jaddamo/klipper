@@ -29,10 +29,12 @@ args = parser.parse_args()
 try:
     idata = open(args.ifile, "rb").read()
 except:
-    sys.exit("Could not open input file '{}'".format(args.ifile))
+    sys.exit(f"Could not open input file '{args.ifile}'")
 
 if len(idata) >= args.pad - 4:
-    sys.exit("Input file size ({} bytes) too large for final size ({} bytes)".format(len(idata), args.pad))
+    sys.exit(
+        f"Input file size ({len(idata)} bytes) too large for final size ({args.pad} bytes)"
+    )
 
 idata_padded = idata + bytes(args.pad - 4 - len(idata))
 
@@ -44,7 +46,7 @@ odata = idata_padded + struct.pack("<L", checksum)
 
 try:
     with open(args.ofile, "w") as ofile:
-        ofile.write("// Padded and checksummed version of: {}\n\n".format(args.ifile))
+        ofile.write(f"// Padded and checksummed version of: {args.ifile}\n\n")
         ofile.write(".cpu cortex-m0plus\n")
         ofile.write(".thumb\n\n")
         ofile.write(".section .boot2, \"ax\"\n\n")
@@ -52,4 +54,4 @@ try:
             chunk = odata[offs:min(offs + 16, len(odata))]
             ofile.write(".byte {}\n".format(", ".join("0x{:02x}".format(b) for b in chunk)))
 except:
-    sys.exit("Could not open output file '{}'".format(args.ofile))
+    sys.exit(f"Could not open output file '{args.ofile}'")

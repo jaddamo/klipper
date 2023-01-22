@@ -21,33 +21,32 @@ APPLY_PREFIX = [
 def parse_log(logname, mcu):
     if mcu is None:
         mcu = "mcu"
-    mcu_prefix = mcu + ":"
+    mcu_prefix = f"{mcu}:"
     apply_prefix = { p: 1 for p in APPLY_PREFIX }
-    f = open(logname, 'r')
-    out = []
-    for line in f:
-        parts = line.split()
-        if not parts or parts[0] not in ('Stats', 'INFO:root:Stats'):
-            #if parts and parts[0] == 'INFO:root:shutdown:':
-            #    break
-            continue
-        prefix = ""
-        keyparts = {}
-        for p in parts[2:]:
-            if '=' not in p:
-                prefix = p
-                if prefix == mcu_prefix:
-                    prefix = ''
+    with open(logname, 'r') as f:
+        out = []
+        for line in f:
+            parts = line.split()
+            if not parts or parts[0] not in ('Stats', 'INFO:root:Stats'):
+                #if parts and parts[0] == 'INFO:root:shutdown:':
+                #    break
                 continue
-            name, val = p.split('=', 1)
-            if name in apply_prefix:
-                name = prefix + name
-            keyparts[name] = val
-        if 'print_time' not in keyparts:
-            continue
-        keyparts['#sampletime'] = float(parts[1][:-1])
-        out.append(keyparts)
-    f.close()
+            prefix = ""
+            keyparts = {}
+            for p in parts[2:]:
+                if '=' not in p:
+                    prefix = p
+                    if prefix == mcu_prefix:
+                        prefix = ''
+                    continue
+                name, val = p.split('=', 1)
+                if name in apply_prefix:
+                    name = prefix + name
+                keyparts[name] = val
+            if 'print_time' not in keyparts:
+                continue
+            keyparts['#sampletime'] = float(parts[1][:-1])
+            out.append(keyparts)
     return out
 
 def setup_matplotlib(output_to_file):
@@ -77,13 +76,15 @@ def find_print_restarts(data):
         last_sampletime = sampletime
         # Check for print stall
         print_stall = int(d['print_stall'])
-        if print_stall < last_print_stall:
-            if last_runoff_start:
-                runoff_samples[last_runoff_start][0] = True
+        if print_stall < last_print_stall and last_runoff_start:
+            runoff_samples[last_runoff_start][0] = True
         last_print_stall = print_stall
-    sample_resets = {sampletime: 1 for stall, samples in runoff_samples.values()
-                     for sampletime in samples if not stall}
-    return sample_resets
+    return {
+        sampletime: 1
+        for stall, samples in runoff_samples.values()
+        for sampletime in samples
+        if not stall
+    }
 
 def plot_mcu(data, maxbw):
     # Generate data for plot
@@ -182,7 +183,7 @@ def plot_system(data):
 def plot_frequency(data, mcu):
     all_keys = {}
     for d in data:
-        all_keys.update(d)
+        all_keys |= d
     one_mcu = mcu is not None
     graph_keys = { key: ([], []) for key in all_keys
                    if (key in ("freq", "adj") or (not one_mcu and (
@@ -198,7 +199,7 @@ def plot_frequency(data, mcu):
     # Build plot
     fig, ax1 = matplotlib.pyplot.subplots()
     if one_mcu:
-        ax1.set_title("MCU '%s' frequency" % (mcu,))
+        ax1.set_title(f"MCU '{mcu}' frequency")
     else:
         ax1.set_title("MCU frequency")
     ax1.set_xlabel('Time')
@@ -219,9 +220,9 @@ def plot_temperature(data, heaters):
     ax2 = ax1.twinx()
     for heater in heaters.split(','):
         heater = heater.strip()
-        temp_key = heater + ':' + 'temp'
-        target_key = heater + ':' + 'target'
-        pwm_key = heater + ':' + 'pwm'
+        temp_key = f'{heater}:temp'
+        target_key = f'{heater}:target'
+        pwm_key = f'{heater}:pwm'
         times = []
         temps = []
         targets = []
@@ -234,15 +235,15 @@ def plot_temperature(data, heaters):
             temps.append(float(temp))
             pwm.append(float(d.get(pwm_key, 0.)))
             targets.append(float(d.get(target_key, 0.)))
-        ax1.plot_date(times, temps, '-', label='%s temp' % (heater,), alpha=0.8)
+        ax1.plot_date(times, temps, '-', label=f'{heater} temp', alpha=0.8)
         if any(targets):
-            label = '%s target' % (heater,)
+            label = f'{heater} target'
             ax1.plot_date(times, targets, '-', label=label, alpha=0.3)
         if any(pwm):
-            label = '%s pwm' % (heater,)
+            label = f'{heater} pwm'
             ax2.plot_date(times, pwm, '-', label=label, alpha=0.2)
     # Build plot
-    ax1.set_title("Temperature of %s" % (heaters,))
+    ax1.set_title(f"Temperature of {heaters}")
     ax1.set_xlabel('Time')
     ax1.set_ylabel('Temperature')
     ax2.set_ylabel('pwm')
